@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "rootDir": ".",
+    "outDir": "dist",
+    "declaration": false,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@notdrive/shared": ["../../packages/shared/src/index.ts"],
+      "@notdrive/shared/*": ["../../packages/shared/src/*"],
+      "@notdrive/api/app-type": ["../api/src/app-type.ts"]
+    }
+  },
+  "include": ["src", "index.html", "vite.config.ts"]
+}

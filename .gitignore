@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+.next
+.turbo
+coverage
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vscode
+.idea
+*.sqlite
+*.sqlite-journal
+data/
+apps/api/notdrive.db*

@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --foreground: 222 16% 12%;
+    --border: 220 14% 92%;
+    --ring: 222 16% 12%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 222 10% 44%;
+    --accent: 220 14% 95%;
+    --accent-foreground: 222 16% 12%;
+    --primary: 222 16% 12%;
+    --primary-foreground: 0 0% 100%;
+    --destructive: 0 66% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 16% 12%;
+    --sidebar: 220 13% 94%;
+  }
+
+  .dark {
+    --background: 220 14% 7%;
+    --foreground: 210 15% 94%;
+    --border: 220 10% 18%;
+    --ring: 210 15% 94%;
+    --muted: 220 14% 12%;
+    --muted-foreground: 220 10% 62%;
+    --accent: 220 14% 14%;
+    --accent-foreground: 210 15% 94%;
+    --primary: 210 15% 94%;
+    --primary-foreground: 220 14% 7%;
+    --destructive: 0 60% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --card: 220 14% 9%;
+    --card-foreground: 210 15% 94%;
+    --sidebar: 220 14% 10%;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: hsl(var(--foreground) / 0.1);
+  }
+
+  /* Thinner, lower-contrast scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border: 2px solid hsl(var(--background));
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+}

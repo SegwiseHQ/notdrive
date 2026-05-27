@@ -1,0 +1,38 @@
+{
+  "name": "notdrive",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "volta": {
+    "node": "22.11.0",
+    "pnpm": "9.12.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter './apps/*' run dev",
+    "dev:api": "pnpm --filter @notdrive/api run dev",
+    "dev:web": "pnpm --filter @notdrive/web run dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "pnpm -r run test",
+    "db:migrate": "pnpm --filter @notdrive/api run db:migrate",
+    "db:generate": "pnpm --filter @notdrive/api run db:generate",
+    "db:studio": "pnpm --filter @notdrive/api run db:studio",
+    "jobs:run": "pnpm --filter @notdrive/api run jobs:run"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,css}": ["biome check --write --no-errors-on-unmatched"]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "typescript": "5.7.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
+}
