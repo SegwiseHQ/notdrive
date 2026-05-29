@@ -41,6 +41,6 @@ export async function listRecent(workspaceId: string, userId: string, limit = 40
       return row ? { p, row } : null;
     })
     .filter((x): x is { p: (typeof picked)[number]; row: (typeof itemRows)[number] } => x !== null);
-  const hydrated = await hydrate(workspaceId, pairs.map((x) => x.row));
+  const hydrated = await hydrate(workspaceId, userId, pairs.map((x) => x.row));
   return pairs.map(({ p }, i) => ({ kind: p.kind, at: p.at, item: hydrated[i]! }));
 }

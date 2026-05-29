@@ -12,6 +12,7 @@ import {
   Moon,
   MoreHorizontal,
   Plus,
+  Search,
   Settings2,
   Star,
   Sun,
@@ -25,7 +26,7 @@ import { CreateDriveMenu } from '../features/drive-picker/CreateDriveMenu.js';
 import { DriveTreePanel } from '../features/tree/DriveTreePanel.js';
 import { TreePanel } from '../features/tree/TreePanel.js';
 import { http } from '../lib/http.js';
-import { useUi } from '../lib/store.js';
+import { useCommand, useUi } from '../lib/store.js';
 import type { DarkMode } from '@notdrive/shared';
 import { cn } from '../lib/utils.js';
 import { WorkspaceSwitcher } from '../features/workspaces/WorkspaceSwitcher.js';
@@ -58,6 +59,8 @@ export function Sidebar({ me }: { me: MeDTO }) {
         </div>
         <OverflowMenu wsId={wsId} />
       </div>
+
+      <SidebarSearchTrigger />
 
       {(favoritesQuery.data?.length ?? 0) > 0 && (
         <div className="mt-3">
@@ -263,5 +266,29 @@ function OverflowMenu({ wsId }: { wsId: string }) {
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
+  );
+}
+
+// Looks like an input, behaves like a button: opens the existing command
+// palette (cmdk) which already does fuzzy search across pages + Drive.
+// Centralizing search there means body-text matches, navigation, and
+// command execution all share one entry point.
+function SidebarSearchTrigger() {
+  const setOpen = useCommand((s) => s.setOpen);
+  const isMac =
+    typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform);
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="mt-1 flex w-full items-center gap-2 rounded-md border border-border bg-muted/40 px-2 py-1.5 text-left text-[12px] text-muted-foreground transition hover:bg-muted"
+      aria-label="Search"
+    >
+      <Search className="size-3.5 shrink-0" />
+      <span className="min-w-0 flex-1 truncate">Search…</span>
+      <kbd className="shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono">
+        {isMac ? '⌘K' : 'Ctrl K'}
+      </kbd>
+    </button>
   );
 }

@@ -48,7 +48,6 @@ export async function createItem(args: ItemCreateArgs): Promise<string> {
       drive_file_id: args.driveFileId,
       parent_id: args.parentId,
       rank,
-      is_favorite: false,
       is_archived: false,
       archived_at: null,
       body: args.body ?? null,
@@ -90,15 +89,37 @@ export async function patchItem(
 ) {
   const existing = await requireItem(workspaceId, id);
   const ts = now();
-  await db
-    .update(schema.items)
-    .set({
-      title: patch.title ?? existing.title,
-      is_favorite: patch.is_favorite ?? existing.is_favorite,
-      body: patch.body !== undefined ? patch.body : existing.body,
-      updated_at: ts,
-    })
-    .where(eq(schema.items.id, id));
+
+  // is_favorite is per-user; route it to user_item_favorites rather than items.
+  if (patch.is_favorite !== undefined) {
+    if (patch.is_favorite) {
+      await db
+        .insert(schema.user_item_favorites)
+        .values({ workspace_id: workspaceId, user_id: userId, item_id: id, created_at: ts })
+        .onConflictDoNothing();
+    } else {
+      await db
+        .delete(schema.user_item_favorites)
+        .where(
+          and(
+            eq(schema.user_item_favorites.user_id, userId),
+            eq(schema.user_item_favorites.item_id, id),
+          ),
+        );
+    }
+  }
+
+  // Only run the items UPDATE if something on items actually changed.
+  if (patch.title !== undefined || patch.body !== undefined) {
+    await db
+      .update(schema.items)
+      .set({
+        title: patch.title ?? existing.title,
+        body: patch.body !== undefined ? patch.body : existing.body,
+        updated_at: ts,
+      })
+      .where(eq(schema.items.id, id));
+  }
   await db.insert(schema.item_events).values({
     id: newId(),
     workspace_id: workspaceId,
@@ -316,6 +337,7 @@ export async function recordOpen(workspaceId: string, userId: string, id: string
 
 export async function listItems(
   workspaceId: string,
+  userId: string,
   q: {
     parent_id?: string;
     root?: boolean;
@@ -329,8 +351,23 @@ export async function listItems(
   if (q.root) conds.push(isNull(schema.items.parent_id));
   else if (q.parent_id) conds.push(eq(schema.items.parent_id, q.parent_id));
   if (q.archived !== undefined) conds.push(eq(schema.items.is_archived, q.archived));
-  if (q.favorite) conds.push(eq(schema.items.is_favorite, true));
   if (q.linked_only) conds.push(isNotNull(schema.items.drive_file_id));
+
+  if (q.favorite) {
+    // Restrict to items the current user has starred.
+    const favIds = await db
+      .select({ item_id: schema.user_item_favorites.item_id })
+      .from(schema.user_item_favorites)
+      .where(
+        and(
+          eq(schema.user_item_favorites.workspace_id, workspaceId),
+          eq(schema.user_item_favorites.user_id, userId),
+        ),
+      );
+    const ids = favIds.map((r) => r.item_id);
+    if (ids.length === 0) return [];
+    conds.push(inArray(schema.items.id, ids));
+  }
 
   const rows = await db
     .select()
@@ -339,10 +376,14 @@ export async function listItems(
     .orderBy(asc(schema.items.rank))
     .limit(q.limit);
 
-  return hydrate(workspaceId, rows);
+  return hydrate(workspaceId, userId, rows);
 }
 
-export async function hydrate(workspaceId: string, rows: (typeof schema.items.$inferSelect)[]): Promise<ItemDTO[]> {
+export async function hydrate(
+  workspaceId: string,
+  userId: string,
+  rows: (typeof schema.items.$inferSelect)[],
+): Promise<ItemDTO[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const driveIds = rows.map((r) => r.drive_file_id).filter((x): x is string => !!x);
@@ -357,6 +398,18 @@ export async function hydrate(workspaceId: string, rows: (typeof schema.items.$i
     arr.push(t.tag_id);
     tagMap.set(t.item_id, arr);
   }
+
+  // Per-user is_favorite: pull the rows the current user has starred.
+  const favRows = await db
+    .select({ item_id: schema.user_item_favorites.item_id })
+    .from(schema.user_item_favorites)
+    .where(
+      and(
+        eq(schema.user_item_favorites.user_id, userId),
+        inArray(schema.user_item_favorites.item_id, ids),
+      ),
+    );
+  const favSet = new Set(favRows.map((r) => r.item_id));
 
   const drives = driveIds.length
     ? await db
@@ -379,7 +432,7 @@ export async function hydrate(workspaceId: string, rows: (typeof schema.items.$i
     parent_id: r.parent_id,
     drive_file_id: r.drive_file_id,
     rank: r.rank,
-    is_favorite: r.is_favorite,
+    is_favorite: favSet.has(r.id),
     is_archived: r.is_archived,
     archived_at: r.archived_at,
     body: r.body ?? null,
@@ -406,8 +459,8 @@ function toDriveDto(d: typeof schema.drive_file_cache.$inferSelect) {
   };
 }
 
-export async function getItem(workspaceId: string, id: string): Promise<ItemDTO> {
+export async function getItem(workspaceId: string, userId: string, id: string): Promise<ItemDTO> {
   const r = await requireItem(workspaceId, id);
-  const [dto] = await hydrate(workspaceId, [r]);
+  const [dto] = await hydrate(workspaceId, userId, [r]);
   return dto!;
 }

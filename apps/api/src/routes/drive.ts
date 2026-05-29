@@ -83,7 +83,7 @@ app.post('/files', requireWorkspace('member'), zValidator('json', driveCreateSch
       parentId: null,
       driveFileId: file.drive_file_id,
     });
-    item = await getItem(m.workspace_id, id);
+    item = await getItem(m.workspace_id, user.id, id);
   }
 
   return c.json({ file, item }, 201);

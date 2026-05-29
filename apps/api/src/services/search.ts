@@ -15,7 +15,7 @@ import { hydrate } from './items.js';
  *
  * FTS is used for text terms when available; other terms are SQL-native.
  */
-export async function search(workspaceId: string, queryText: string, limit: number): Promise<ItemDTO[]> {
+export async function search(workspaceId: string, userId: string, queryText: string, limit: number): Promise<ItemDTO[]> {
   const ast = parseQuery(queryText);
   if (ast.kind === 'empty') return [];
 
@@ -26,7 +26,7 @@ export async function search(workspaceId: string, queryText: string, limit: numb
   const universe = new Set(allRows.map((r) => r.id));
   if (universe.size === 0) return [];
 
-  const hits = await evalAst(workspaceId, universe, ast);
+  const hits = await evalAst(workspaceId, userId, universe, ast);
   if (hits.size === 0) return [];
 
   const ids = Array.from(hits).slice(0, limit);
@@ -34,25 +34,25 @@ export async function search(workspaceId: string, queryText: string, limit: numb
     .select()
     .from(schema.items)
     .where(and(eq(schema.items.workspace_id, workspaceId), inArray(schema.items.id, ids)));
-  return hydrate(workspaceId, rows);
+  return hydrate(workspaceId, userId, rows);
 }
 
-async function evalAst(workspaceId: string, universe: Set<string>, node: Ast): Promise<Set<string>> {
+async function evalAst(workspaceId: string, userId: string, universe: Set<string>, node: Ast): Promise<Set<string>> {
   switch (node.kind) {
     case 'term':
-      return evalTerm(workspaceId, universe, node.term);
+      return evalTerm(workspaceId, userId, universe, node.term);
     case 'not': {
-      const inner = await evalAst(workspaceId, universe, node.inner);
+      const inner = await evalAst(workspaceId, userId, universe, node.inner);
       return new Set([...universe].filter((x) => !inner.has(x)));
     }
     case 'and': {
-      const l = await evalAst(workspaceId, universe, node.left);
-      const r = await evalAst(workspaceId, universe, node.right);
+      const l = await evalAst(workspaceId, userId, universe, node.left);
+      const r = await evalAst(workspaceId, userId, universe, node.right);
       return new Set([...l].filter((x) => r.has(x)));
     }
     case 'or': {
-      const l = await evalAst(workspaceId, universe, node.left);
-      const r = await evalAst(workspaceId, universe, node.right);
+      const l = await evalAst(workspaceId, userId, universe, node.left);
+      const r = await evalAst(workspaceId, userId, universe, node.right);
       return new Set([...l, ...r]);
     }
     case 'empty':
@@ -60,7 +60,7 @@ async function evalAst(workspaceId: string, universe: Set<string>, node: Ast): P
   }
 }
 
-async function evalTerm(workspaceId: string, _universe: Set<string>, term: import('@notdrive/shared').Term): Promise<Set<string>> {
+async function evalTerm(workspaceId: string, userId: string, _universe: Set<string>, term: import('@notdrive/shared').Term): Promise<Set<string>> {
   switch (term.kind) {
     case 'text':
       return textMatch(workspaceId, term.value);
@@ -71,7 +71,7 @@ async function evalTerm(workspaceId: string, _universe: Set<string>, term: impor
     case 'modified':
       return modifiedMatch(workspaceId, term.op, term.value);
     case 'is':
-      return isFlag(workspaceId, term.flag);
+      return isFlag(workspaceId, userId, term.flag);
     case 'in':
       return inParent(workspaceId, term.value);
   }
@@ -165,13 +165,25 @@ async function modifiedMatch(
 
 async function isFlag(
   workspaceId: string,
+  userId: string,
   flag: 'favorite' | 'archived' | 'page' | 'file',
 ): Promise<Set<string>> {
+  if (flag === 'favorite') {
+    // Per-user starring.
+    const rows = await db
+      .select({ id: schema.user_item_favorites.item_id })
+      .from(schema.user_item_favorites)
+      .where(
+        and(
+          eq(schema.user_item_favorites.workspace_id, workspaceId),
+          eq(schema.user_item_favorites.user_id, userId),
+        ),
+      );
+    return new Set(rows.map((r) => r.id));
+  }
+
   const conds = [eq(schema.items.workspace_id, workspaceId)];
   switch (flag) {
-    case 'favorite':
-      conds.push(eq(schema.items.is_favorite, true));
-      break;
     case 'archived':
       conds.push(eq(schema.items.is_archived, true));
       break;
