@@ -90,14 +90,14 @@ async function textMatch(workspaceId: string, needle: string): Promise<Set<strin
     `)) as Array<{ id: string }>;
     return new Set(rows.map((r) => r.id));
   }
-  // Postgres: tsvector on title, LIKE on drive_file_cache.name as fallback.
+  // Postgres: tsvector covering title + (HTML-stripped) body; LIKE on drive_file_cache.name as fallback.
   const q = needle.replace(/\s+/g, ' & ');
   const rows = (await db.execute(sql`
     SELECT i.id FROM items i
     LEFT JOIN drive_file_cache d
       ON d.workspace_id = i.workspace_id AND d.drive_file_id = i.drive_file_id
     WHERE i.workspace_id = ${workspaceId}
-      AND (i.title_tsv @@ to_tsquery('simple', ${q})
+      AND (i.search_tsv @@ to_tsquery('simple', ${q})
            OR d.name ILIKE ${'%' + needle + '%'})
   `)) as unknown as { rows: Array<{ id: string }> };
   return new Set(rows.rows.map((r) => r.id));

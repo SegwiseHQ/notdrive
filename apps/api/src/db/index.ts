@@ -1,9 +1,25 @@
 import Database from 'better-sqlite3';
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pg from 'pg';
 import { env } from '../env.js';
+
+type PgSslOption = false | { rejectUnauthorized: boolean; ca?: string };
+
+function pgSslOption(): PgSslOption {
+  switch (env.DATABASE_SSL) {
+    case 'disable':
+      return false;
+    case 'no-verify':
+      return { rejectUnauthorized: false };
+    case 'require':
+      return env.DATABASE_SSL_CA
+        ? { rejectUnauthorized: true, ca: readFileSync(resolve(env.DATABASE_SSL_CA), 'utf8') }
+        : { rejectUnauthorized: true };
+  }
+}
 
 const { Pool } = pg;
 import * as sqliteSchema from './schema.sqlite.js';
@@ -21,7 +37,7 @@ let sqliteClient: Database.Database | null = null;
 let pgPool: Pool | null = null;
 
 if (usePg) {
-  pgPool = new Pool({ connectionString: env.DATABASE_URL });
+  pgPool = new Pool({ connectionString: env.DATABASE_URL, ssl: pgSslOption() });
   dbInstance = drizzlePg(pgPool, { schema: pgSchema as unknown as Schema });
 } else {
   const absPath = resolve(process.cwd(), env.DATABASE_URL);

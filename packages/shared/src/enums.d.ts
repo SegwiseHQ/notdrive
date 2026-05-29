@@ -1,0 +1,14 @@
+export declare const ITEM_TYPES: readonly ["page", "file"];
+export type ItemType = (typeof ITEM_TYPES)[number];
+export declare const ROLES: readonly ["viewer", "member", "admin", "owner"];
+export type Role = (typeof ROLES)[number];
+export declare const ROLE_RANK: Record<Role, number>;
+export declare function roleAtLeast(actual: Role, required: Role): boolean;
+export declare const VIEW_LAYOUTS: readonly ["list", "grid", "timeline", "tagboard"];
+export type ViewLayout = (typeof VIEW_LAYOUTS)[number];
+export declare const DARK_MODES: readonly ["system", "light", "dark"];
+export type DarkMode = (typeof DARK_MODES)[number];
+export declare const EVENT_KINDS: readonly ["created", "opened", "updated", "archived", "restored", "linked", "unlinked", "purged"];
+export type EventKind = (typeof EVENT_KINDS)[number];
+export declare const TAG_COLORS: readonly ["gray", "red", "orange", "yellow", "green", "teal", "blue", "indigo", "purple", "pink"];
+export type TagColor = (typeof TAG_COLORS)[number];

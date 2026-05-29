@@ -29,6 +29,12 @@ const minimalSchema = z.object({
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('debug'),
   DB_DRIVER: z.enum(['sqlite', 'postgres']).default('sqlite'),
   DATABASE_URL: z.string().min(1).default('./notdrive.db'),
+  // Postgres-only. Default `disable` keeps local docker setups unchanged.
+  // `require` verifies the server cert against system CAs (or DATABASE_SSL_CA when set — use this for RDS).
+  // `no-verify` enables SSL but skips cert validation (ad-hoc testing only).
+  DATABASE_SSL: z.enum(['disable', 'require', 'no-verify']).default('disable'),
+  // Optional path to a CA cert file (e.g. AWS RDS global-bundle.pem). Used when DATABASE_SSL=require.
+  DATABASE_SSL_CA: z.string().optional(),
 });
 
 // Server env — everything the running API needs on top of minimal.
