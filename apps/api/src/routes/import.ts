@@ -24,7 +24,11 @@ app.post('/zip', async (c) => {
   const buffer = Buffer.from(await file.arrayBuffer());
   const user = c.get('user');
   const m = c.get('membership');
-  const result = await importMarkdownZip(m.workspace_id, user.id, buffer);
+  // Optional "private=true" form field. Coerces 'true' / '1' / 'on' to true.
+  const rawPrivate = form.private;
+  const isPrivate =
+    typeof rawPrivate === 'string' && ['true', '1', 'on'].includes(rawPrivate.toLowerCase());
+  const result = await importMarkdownZip(m.workspace_id, user.id, buffer, { private: isPrivate });
   return c.json(result, 201);
 });
 

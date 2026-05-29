@@ -15,7 +15,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ChevronRight, File, FileText, MoreHorizontal, Plus, Star } from 'lucide-react';
+import { Archive, ChevronRight, File, FileText, Lock, MoreHorizontal, Plus, Star } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -111,6 +111,9 @@ function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
         >
           {item.title || 'Untitled'}
         </Link>
+        {item.visibility === 'private' && (
+          <Lock className="size-3 shrink-0 text-amber-500" />
+        )}
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button

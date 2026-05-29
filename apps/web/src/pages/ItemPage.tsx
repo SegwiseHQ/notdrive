@@ -4,6 +4,8 @@ import {
   Archive,
   ExternalLink,
   Link as LinkIcon,
+  Lock,
+  LockOpen,
   MoreHorizontal,
   Share2,
   Star,
@@ -60,6 +62,7 @@ export function ItemPage() {
       title?: string;
       is_favorite?: boolean;
       body?: string | null;
+      visibility?: 'workspace' | 'private';
     }) => {
       const seq = ++saveSeq.current;
       const saved = await http.patchItem(itemId, body);
@@ -69,7 +72,11 @@ export function ItemPage() {
       // Discard responses from earlier-fired saves that resolved out of order.
       if (seq !== saveSeq.current) return;
       qc.setQueryData(['item', itemId], saved);
-      if (vars.title !== undefined || vars.is_favorite !== undefined) {
+      if (
+        vars.title !== undefined ||
+        vars.is_favorite !== undefined ||
+        vars.visibility !== undefined
+      ) {
         qc.invalidateQueries({ queryKey: ['items', wsId] });
       }
     },
@@ -111,6 +118,33 @@ export function ItemPage() {
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[880px] flex-col px-12 py-10">
       <div className="mb-2 flex items-center justify-end gap-1">
+        {item.visibility === 'private' && (
+          <span
+            className="mr-1 flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400"
+            title="Only you can see this page"
+          >
+            <Lock className="size-3" /> Private
+          </span>
+        )}
+        <button
+          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+          onClick={() =>
+            patch.mutate({
+              visibility: item.visibility === 'private' ? 'workspace' : 'private',
+            })
+          }
+          title={
+            item.visibility === 'private'
+              ? 'Share with workspace'
+              : 'Make private (only you can see this and all child pages)'
+          }
+        >
+          {item.visibility === 'private' ? (
+            <LockOpen className="size-4" />
+          ) : (
+            <Lock className="size-4" />
+          )}
+        </button>
         <button
           className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
           onClick={() => patch.mutate({ is_favorite: !item.is_favorite })}

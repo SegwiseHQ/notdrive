@@ -214,9 +214,10 @@ export const http = {
       item: ItemDTO | null;
     }>('/drive/files', { method: 'POST', body: JSON.stringify(body) }),
 
-  importZip: async (file: File) => {
+  importZip: async (file: File, opts: { private?: boolean } = {}) => {
     const form = new FormData();
     form.append('file', file);
+    if (opts.private) form.append('private', 'true');
     const wsId = localStorage.getItem('notdrive.workspace_id') ?? undefined;
     const headers = new Headers();
     if (wsId) headers.set('x-workspace-id', wsId);

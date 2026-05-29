@@ -1,6 +1,6 @@
 import { INITIAL_RANK, between } from '@notdrive/shared';
 import type { ItemDTO } from '@notdrive/shared';
-import { and, asc, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import { deleteBlob, pullBody, pushBody } from '../drive/appdata.js';
 import { badRequest, notFound } from '../util/errors.js';
@@ -16,6 +16,22 @@ export interface ItemCreateArgs {
   parentId: string | null;
   driveFileId: string | null;
   body?: string | null;
+  // When omitted on a root item, defaults to 'workspace'. When omitted on a
+  // child, inherits from the parent. Pass 'private' explicitly to make a
+  // top-level item private to the creating user.
+  visibility?: 'workspace' | 'private';
+}
+
+/**
+ * SQL predicate restricting items to those the user is allowed to see:
+ * either workspace-visible, or private-but-owned-by-this-user. Drop into
+ * any items query's WHERE clause via `and(...)`.
+ */
+export function visibilityClause(userId: string) {
+  return or(
+    eq(schema.items.visibility, 'workspace'),
+    and(eq(schema.items.visibility, 'private'), eq(schema.items.owner_id, userId)),
+  )!;
 }
 
 async function lastSiblingRank(workspaceId: string, parentId: string | null): Promise<string | undefined> {
@@ -39,6 +55,27 @@ export async function createItem(args: ItemCreateArgs): Promise<string> {
   const last = await lastSiblingRank(args.workspaceId, args.parentId);
   const rank = between(last, undefined) || INITIAL_RANK;
 
+  // Visibility inheritance:
+  //   - explicit args.visibility wins
+  //   - else if there's a parent, inherit its visibility + owner_id
+  //   - else default to 'workspace' (everyone can see)
+  let visibility: 'workspace' | 'private' = 'workspace';
+  let ownerId: string | null = null;
+  if (args.visibility) {
+    visibility = args.visibility;
+    if (visibility === 'private') ownerId = args.userId;
+  } else if (args.parentId) {
+    const parent = await db
+      .select({ visibility: schema.items.visibility, owner_id: schema.items.owner_id })
+      .from(schema.items)
+      .where(and(eq(schema.items.id, args.parentId), eq(schema.items.workspace_id, args.workspaceId)))
+      .limit(1);
+    if (parent[0]?.visibility === 'private') {
+      visibility = 'private';
+      ownerId = parent[0].owner_id ?? args.userId;
+    }
+  }
+
   await db.transaction(async (tx) => {
     await tx.insert(schema.items).values({
       id,
@@ -51,6 +88,8 @@ export async function createItem(args: ItemCreateArgs): Promise<string> {
       is_archived: false,
       archived_at: null,
       body: args.body ?? null,
+      visibility,
+      owner_id: ownerId,
       created_by: args.userId,
       created_at: ts,
       updated_at: ts,
@@ -81,13 +120,64 @@ async function requireItem(workspaceId: string, id: string) {
   return rows[0];
 }
 
+/**
+ * Like requireItem but also enforces that the caller can see this item.
+ * Use this on read paths. Mutation paths (patch/move/archive/etc.) use the
+ * looser requireItem followed by an explicit owner check via assertCanMutate.
+ */
+async function requireVisibleItem(workspaceId: string, userId: string, id: string) {
+  const row = await requireItem(workspaceId, id);
+  if (row.visibility === 'private' && row.owner_id !== userId) {
+    throw notFound('item not found');
+  }
+  return row;
+}
+
+function assertCanMutate(row: typeof schema.items.$inferSelect, userId: string) {
+  if (row.visibility === 'private' && row.owner_id !== userId) {
+    throw notFound('item not found');
+  }
+}
+
+/**
+ * BFS over parent_id to collect every descendant of `rootId` in the workspace.
+ * Used when flipping visibility — the whole subtree must move together so we
+ * never end up with a private parent containing workspace-visible children.
+ */
+async function collectDescendantIds(workspaceId: string, rootId: string): Promise<string[]> {
+  const all: string[] = [];
+  let frontier = [rootId];
+  while (frontier.length) {
+    const children = await db
+      .select({ id: schema.items.id })
+      .from(schema.items)
+      .where(
+        and(
+          eq(schema.items.workspace_id, workspaceId),
+          inArray(schema.items.parent_id, frontier),
+        ),
+      );
+    if (children.length === 0) break;
+    const ids = children.map((r) => r.id);
+    all.push(...ids);
+    frontier = ids;
+  }
+  return all;
+}
+
 export async function patchItem(
   workspaceId: string,
   userId: string,
   id: string,
-  patch: { title?: string; is_favorite?: boolean; body?: string | null },
+  patch: {
+    title?: string;
+    is_favorite?: boolean;
+    body?: string | null;
+    visibility?: 'workspace' | 'private';
+  },
 ) {
   const existing = await requireItem(workspaceId, id);
+  assertCanMutate(existing, userId);
   const ts = now();
 
   // is_favorite is per-user; route it to user_item_favorites rather than items.
@@ -110,15 +200,41 @@ export async function patchItem(
   }
 
   // Only run the items UPDATE if something on items actually changed.
-  if (patch.title !== undefined || patch.body !== undefined) {
+  if (
+    patch.title !== undefined ||
+    patch.body !== undefined ||
+    patch.visibility !== undefined
+  ) {
+    const newVisibility = patch.visibility ?? existing.visibility;
+    const newOwnerId =
+      patch.visibility === undefined
+        ? existing.owner_id
+        : patch.visibility === 'private'
+        ? userId
+        : null;
     await db
       .update(schema.items)
       .set({
         title: patch.title ?? existing.title,
         body: patch.body !== undefined ? patch.body : existing.body,
+        visibility: newVisibility,
+        owner_id: newOwnerId,
         updated_at: ts,
       })
       .where(eq(schema.items.id, id));
+
+    // If visibility flipped, cascade to all descendants so the whole subtree
+    // stays consistent (child rows inherit parent's visibility at create time;
+    // a later flip needs to push down).
+    if (patch.visibility !== undefined && patch.visibility !== existing.visibility) {
+      const descendantIds = await collectDescendantIds(workspaceId, id);
+      if (descendantIds.length) {
+        await db
+          .update(schema.items)
+          .set({ visibility: newVisibility, owner_id: newOwnerId, updated_at: ts })
+          .where(inArray(schema.items.id, descendantIds));
+      }
+    }
   }
   await db.insert(schema.item_events).values({
     id: newId(),
@@ -164,7 +280,8 @@ export async function moveItem(
   id: string,
   args: { parent_id: string | null; before_id?: string; after_id?: string },
 ) {
-  await requireItem(workspaceId, id);
+  const existing = await requireItem(workspaceId, id);
+  assertCanMutate(existing, userId);
   if (args.parent_id === id) throw badRequest('cannot parent item to itself');
   if (args.parent_id) {
     // Guard against cycles: walk up parents until null or hit id.
@@ -214,13 +331,51 @@ export async function moveItem(
   const rank = between(prev, next);
   const ts = now();
 
+  // If the new parent is private, force this item (and all descendants) to
+  // inherit. Moving a workspace-visible page under a private parent would
+  // otherwise leave it visible to everyone — surprise leak via parent_id.
+  // Moving under a workspace parent leaves visibility alone (private items
+  // stay private until the owner explicitly flips them).
+  let inheritedVisibility: 'workspace' | 'private' | null = null;
+  let inheritedOwnerId: string | null = null;
+  if (args.parent_id) {
+    const parent = await db
+      .select({ visibility: schema.items.visibility, owner_id: schema.items.owner_id })
+      .from(schema.items)
+      .where(and(eq(schema.items.id, args.parent_id), eq(schema.items.workspace_id, workspaceId)))
+      .limit(1);
+    if (parent[0]?.visibility === 'private') {
+      inheritedVisibility = 'private';
+      inheritedOwnerId = parent[0].owner_id ?? userId;
+    }
+  }
+
   await db
     .update(schema.items)
-    .set({ parent_id: args.parent_id, rank, updated_at: ts })
+    .set({
+      parent_id: args.parent_id,
+      rank,
+      updated_at: ts,
+      ...(inheritedVisibility
+        ? { visibility: inheritedVisibility, owner_id: inheritedOwnerId }
+        : {}),
+    })
     .where(eq(schema.items.id, id));
+
+  if (inheritedVisibility) {
+    const descendants = await collectDescendantIds(workspaceId, id);
+    if (descendants.length) {
+      await db
+        .update(schema.items)
+        .set({ visibility: inheritedVisibility, owner_id: inheritedOwnerId, updated_at: ts })
+        .where(inArray(schema.items.id, descendants));
+    }
+  }
 }
 
 export async function archiveItem(workspaceId: string, userId: string, id: string, reason?: string) {
+  const existing = await requireItem(workspaceId, id);
+  assertCanMutate(existing, userId);
   const ts = now();
   await db
     .update(schema.items)
@@ -238,6 +393,8 @@ export async function archiveItem(workspaceId: string, userId: string, id: strin
 }
 
 export async function restoreItem(workspaceId: string, userId: string, id: string) {
+  const existing = await requireItem(workspaceId, id);
+  assertCanMutate(existing, userId);
   const ts = now();
   await db
     .update(schema.items)
@@ -256,6 +413,7 @@ export async function restoreItem(workspaceId: string, userId: string, id: strin
 
 export async function purgeItem(workspaceId: string, userId: string, id: string) {
   const r = await requireItem(workspaceId, id);
+  assertCanMutate(r, userId);
   if (!r.is_archived) throw badRequest('item must be archived before purge');
   if (r.appdata_file_id) {
     void deleteBlob(userId, r.appdata_file_id);
@@ -265,6 +423,7 @@ export async function purgeItem(workspaceId: string, userId: string, id: string)
 
 export async function restoreBodyFromAppData(workspaceId: string, userId: string, id: string) {
   const r = await requireItem(workspaceId, id);
+  assertCanMutate(r, userId);
   if (!r.appdata_file_id) throw badRequest('no appData backup for this page');
   const body = await pullBody(userId, r.appdata_file_id);
   if (body === null) throw badRequest('appData blob not readable');
@@ -278,6 +437,8 @@ export async function linkDriveFile(
   id: string,
   driveFileId: string,
 ) {
+  const existing = await requireItem(workspaceId, id);
+  assertCanMutate(existing, userId);
   const ts = now();
   await db
     .update(schema.items)
@@ -307,6 +468,8 @@ async function maybeAutoShare(workspaceId: string, driveFileId: string, granterI
 }
 
 export async function unlinkDriveFile(workspaceId: string, userId: string, id: string) {
+  const existing = await requireItem(workspaceId, id);
+  assertCanMutate(existing, userId);
   const ts = now();
   await db
     .update(schema.items)
@@ -347,7 +510,7 @@ export async function listItems(
     limit: number;
   },
 ): Promise<ItemDTO[]> {
-  const conds = [eq(schema.items.workspace_id, workspaceId)];
+  const conds = [eq(schema.items.workspace_id, workspaceId), visibilityClause(userId)];
   if (q.root) conds.push(isNull(schema.items.parent_id));
   else if (q.parent_id) conds.push(eq(schema.items.parent_id, q.parent_id));
   if (q.archived !== undefined) conds.push(eq(schema.items.is_archived, q.archived));
@@ -436,6 +599,8 @@ export async function hydrate(
     is_archived: r.is_archived,
     archived_at: r.archived_at,
     body: r.body ?? null,
+    visibility: (r.visibility as 'workspace' | 'private') ?? 'workspace',
+    owner_id: r.owner_id,
     created_at: r.created_at,
     updated_at: r.updated_at,
     tag_ids: tagMap.get(r.id) ?? [],
@@ -460,7 +625,7 @@ function toDriveDto(d: typeof schema.drive_file_cache.$inferSelect) {
 }
 
 export async function getItem(workspaceId: string, userId: string, id: string): Promise<ItemDTO> {
-  const r = await requireItem(workspaceId, id);
+  const r = await requireVisibleItem(workspaceId, userId, id);
   const [dto] = await hydrate(workspaceId, userId, [r]);
   return dto!;
 }

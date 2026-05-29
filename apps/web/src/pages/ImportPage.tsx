@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileArchive, Upload } from 'lucide-react';
+import { FileArchive, Lock, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -17,10 +17,11 @@ export function ImportPage() {
   const navigate = useNavigate();
   const { wsId = '' } = useParams();
   const [file, setFile] = useState<File | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const upload = useMutation({
-    mutationFn: (f: File) => http.importZip(f),
+    mutationFn: (f: File) => http.importZip(f, { private: isPrivate }),
     onSuccess: (r) => {
       setResult(r);
       qc.invalidateQueries({ queryKey: ['items'] });
@@ -65,6 +66,25 @@ export function ImportPage() {
             setResult(null);
           }}
         />
+      </label>
+
+      <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-md border border-border bg-muted/20 p-3 text-xs hover:bg-muted/40">
+        <input
+          type="checkbox"
+          checked={isPrivate}
+          onChange={(e) => setIsPrivate(e.target.checked)}
+          className="mt-0.5"
+        />
+        <div className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-1 font-medium">
+            <Lock className="size-3" /> Make this import private to me
+          </span>
+          <span className="text-muted-foreground">
+            Only you will see these pages. Other workspace members won't see them in the sidebar,
+            search results, or anywhere else. You can flip individual pages back to workspace-visible
+            later.
+          </span>
+        </div>
       </label>
 
       <div className="mt-4 flex items-center gap-2">

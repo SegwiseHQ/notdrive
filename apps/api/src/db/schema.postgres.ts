@@ -101,6 +101,11 @@ export const items = pgTable(
     archived_at: ts('archived_at'),
     body: text('body'),
     appdata_file_id: text('appdata_file_id'),
+    // 'workspace' = visible to every workspace member (default).
+    // 'private'   = visible only to owner_id.
+    // Child items inherit visibility + owner_id from their parent at create time.
+    visibility: text('visibility').notNull().default('workspace'),
+    owner_id: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
     created_by: text('created_by').notNull().references(() => users.id),
     created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
     updated_at: ts('updated_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
@@ -109,6 +114,8 @@ export const items = pgTable(
     idxParent: index('items_parent').on(t.workspace_id, t.parent_id, t.rank),
     idxArchived: index('items_archived').on(t.workspace_id, t.is_archived),
     idxDriveFile: index('items_drive_file').on(t.drive_file_id),
+    // Speeds up the private-items filter on every list/search.
+    idxVisibility: index('items_visibility').on(t.workspace_id, t.visibility, t.owner_id),
   }),
 );
 

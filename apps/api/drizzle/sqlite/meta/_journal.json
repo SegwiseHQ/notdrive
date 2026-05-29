@@ -22,6 +22,13 @@
       "when": 1780049824294,
       "tag": "0002_brief_leo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1780057807674,
+      "tag": "0003_bitter_drax",
+      "breakpoints": true
     }
   ]
 }

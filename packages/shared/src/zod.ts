@@ -18,17 +18,21 @@ export const viewLayoutSchema = z.enum(VIEW_LAYOUTS);
 export const darkModeSchema = z.enum(DARK_MODES);
 export const tagColorSchema = z.enum(TAG_COLORS);
 
+export const visibilitySchema = z.enum(['workspace', 'private']);
+
 export const itemCreateSchema = z.object({
   type: itemTypeSchema.default('page'),
   title: z.string().min(1).max(280),
   parent_id: idSchema.nullable().optional(),
   drive_file_id: z.string().min(1).max(128).nullable().optional(),
+  visibility: visibilitySchema.optional(),
 });
 
 export const itemPatchSchema = z.object({
   title: z.string().min(1).max(280).optional(),
   is_favorite: z.boolean().optional(),
   body: z.string().max(500_000).nullable().optional(),
+  visibility: visibilitySchema.optional(),
 });
 
 export const itemMoveSchema = z

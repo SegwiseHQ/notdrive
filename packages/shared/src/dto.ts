@@ -34,6 +34,9 @@ export interface ItemDTO {
   is_archived: boolean;
   archived_at: number | null;
   body: string | null;
+  // 'workspace' = visible to all members. 'private' = only owner_id can see.
+  visibility: 'workspace' | 'private';
+  owner_id: string | null;
   created_at: number;
   updated_at: number;
   tag_ids: string[];
