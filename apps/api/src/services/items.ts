@@ -26,12 +26,40 @@ export interface ItemCreateArgs {
  * SQL predicate restricting items to those the user is allowed to see:
  * either workspace-visible, or private-but-owned-by-this-user. Drop into
  * any items query's WHERE clause via `and(...)`.
+ *
+ * `or(...)` only returns undefined when called with zero args; with our two
+ * fixed args the result is always defined, so the narrowing cast is safe.
  */
 export function visibilityClause(userId: string) {
-  return or(
+  const clause = or(
     eq(schema.items.visibility, 'workspace'),
     and(eq(schema.items.visibility, 'private'), eq(schema.items.owner_id, userId)),
-  )!;
+  );
+  if (!clause) throw new Error('visibilityClause: or() produced undefined');
+  return clause;
+}
+
+/**
+ * Fetch a parent item's visibility + owner_id. Returns null if the parent
+ * doesn't exist or isn't reachable by the caller (private + owned by someone
+ * else). Callers that want to inherit from the parent must treat null as
+ * "no parent" — preventing privilege escalation via guessed parent ids.
+ */
+async function getParentVisibility(
+  workspaceId: string,
+  userId: string,
+  parentId: string,
+): Promise<{ visibility: 'workspace' | 'private'; owner_id: string | null } | null> {
+  const rows = await db
+    .select({ visibility: schema.items.visibility, owner_id: schema.items.owner_id })
+    .from(schema.items)
+    .where(and(eq(schema.items.id, parentId), eq(schema.items.workspace_id, workspaceId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  // Hide private parents the caller doesn't own.
+  if (row.visibility === 'private' && row.owner_id !== userId) return null;
+  return { visibility: row.visibility as 'workspace' | 'private', owner_id: row.owner_id };
 }
 
 async function lastSiblingRank(workspaceId: string, parentId: string | null): Promise<string | undefined> {
@@ -55,6 +83,15 @@ export async function createItem(args: ItemCreateArgs): Promise<string> {
   const last = await lastSiblingRank(args.workspaceId, args.parentId);
   const rank = between(last, undefined) || INITIAL_RANK;
 
+  // If a parent was specified, fetch it through the visibility-aware helper.
+  // This both gives us the parent's visibility for inheritance AND rejects
+  // attempts to create children under a private parent the caller can't see.
+  let parent: Awaited<ReturnType<typeof getParentVisibility>> = null;
+  if (args.parentId) {
+    parent = await getParentVisibility(args.workspaceId, args.userId, args.parentId);
+    if (!parent) throw notFound('parent item not found');
+  }
+
   // Visibility inheritance:
   //   - explicit args.visibility wins
   //   - else if there's a parent, inherit its visibility + owner_id
@@ -64,16 +101,9 @@ export async function createItem(args: ItemCreateArgs): Promise<string> {
   if (args.visibility) {
     visibility = args.visibility;
     if (visibility === 'private') ownerId = args.userId;
-  } else if (args.parentId) {
-    const parent = await db
-      .select({ visibility: schema.items.visibility, owner_id: schema.items.owner_id })
-      .from(schema.items)
-      .where(and(eq(schema.items.id, args.parentId), eq(schema.items.workspace_id, args.workspaceId)))
-      .limit(1);
-    if (parent[0]?.visibility === 'private') {
-      visibility = 'private';
-      ownerId = parent[0].owner_id ?? args.userId;
-    }
+  } else if (parent?.visibility === 'private') {
+    visibility = 'private';
+    ownerId = parent.owner_id ?? args.userId;
   }
 
   await db.transaction(async (tx) => {
@@ -104,7 +134,11 @@ export async function createItem(args: ItemCreateArgs): Promise<string> {
       created_at: ts,
     });
   });
-  if (args.driveFileId) {
+  // Private pages don't auto-share their Drive file — the whole point of
+  // private visibility is that other workspace members don't see this content.
+  // Sharing the underlying Drive file would leak the file even though the page
+  // is hidden.
+  if (args.driveFileId && visibility !== 'private') {
     void maybeAutoShare(args.workspaceId, args.driveFileId, args.userId);
   }
   return id;
@@ -163,6 +197,27 @@ async function collectDescendantIds(workspaceId: string, rootId: string): Promis
     frontier = ids;
   }
   return all;
+}
+
+/**
+ * Apply a (visibility, owner_id) pair to every descendant of `rootId`.
+ * Called by patchItem and moveItem whenever the root's visibility changes —
+ * private/workspace state must propagate to the whole subtree atomically so
+ * the parent_id chain never crosses a visibility boundary.
+ */
+async function cascadeVisibility(
+  workspaceId: string,
+  rootId: string,
+  visibility: 'workspace' | 'private',
+  ownerId: string | null,
+  ts: number,
+) {
+  const descendants = await collectDescendantIds(workspaceId, rootId);
+  if (descendants.length === 0) return;
+  await db
+    .update(schema.items)
+    .set({ visibility, owner_id: ownerId, updated_at: ts })
+    .where(inArray(schema.items.id, descendants));
 }
 
 export async function patchItem(
@@ -227,13 +282,7 @@ export async function patchItem(
     // stays consistent (child rows inherit parent's visibility at create time;
     // a later flip needs to push down).
     if (patch.visibility !== undefined && patch.visibility !== existing.visibility) {
-      const descendantIds = await collectDescendantIds(workspaceId, id);
-      if (descendantIds.length) {
-        await db
-          .update(schema.items)
-          .set({ visibility: newVisibility, owner_id: newOwnerId, updated_at: ts })
-          .where(inArray(schema.items.id, descendantIds));
-      }
+      await cascadeVisibility(workspaceId, id, newVisibility, newOwnerId, ts);
     }
   }
   await db.insert(schema.item_events).values({
@@ -331,22 +380,19 @@ export async function moveItem(
   const rank = between(prev, next);
   const ts = now();
 
-  // If the new parent is private, force this item (and all descendants) to
-  // inherit. Moving a workspace-visible page under a private parent would
-  // otherwise leave it visible to everyone — surprise leak via parent_id.
-  // Moving under a workspace parent leaves visibility alone (private items
-  // stay private until the owner explicitly flips them).
+  // Reject moves into a parent the caller can't see (otherwise a member who
+  // guesses a private parent id could donate items into someone else's tree).
+  // If the new parent is private, force this item + all descendants to inherit.
+  // Moving under a workspace parent leaves visibility alone (private items stay
+  // private until the owner explicitly flips them).
   let inheritedVisibility: 'workspace' | 'private' | null = null;
   let inheritedOwnerId: string | null = null;
   if (args.parent_id) {
-    const parent = await db
-      .select({ visibility: schema.items.visibility, owner_id: schema.items.owner_id })
-      .from(schema.items)
-      .where(and(eq(schema.items.id, args.parent_id), eq(schema.items.workspace_id, workspaceId)))
-      .limit(1);
-    if (parent[0]?.visibility === 'private') {
+    const parent = await getParentVisibility(workspaceId, userId, args.parent_id);
+    if (!parent) throw notFound('parent item not found');
+    if (parent.visibility === 'private') {
       inheritedVisibility = 'private';
-      inheritedOwnerId = parent[0].owner_id ?? userId;
+      inheritedOwnerId = parent.owner_id ?? userId;
     }
   }
 
@@ -363,13 +409,7 @@ export async function moveItem(
     .where(eq(schema.items.id, id));
 
   if (inheritedVisibility) {
-    const descendants = await collectDescendantIds(workspaceId, id);
-    if (descendants.length) {
-      await db
-        .update(schema.items)
-        .set({ visibility: inheritedVisibility, owner_id: inheritedOwnerId, updated_at: ts })
-        .where(inArray(schema.items.id, descendants));
-    }
+    await cascadeVisibility(workspaceId, id, inheritedVisibility, inheritedOwnerId, ts);
   }
 }
 
@@ -454,7 +494,10 @@ export async function linkDriveFile(
     created_at: ts,
   });
 
-  void maybeAutoShare(workspaceId, driveFileId, userId);
+  // Same guard as createItem: don't auto-share Drive files attached to private pages.
+  if (existing.visibility !== 'private') {
+    void maybeAutoShare(workspaceId, driveFileId, userId);
+  }
 }
 
 async function maybeAutoShare(workspaceId: string, driveFileId: string, granterId: string) {
