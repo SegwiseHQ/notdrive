@@ -1,0 +1,1 @@
+ALTER TABLE "items" ADD CONSTRAINT "items_visibility_check" CHECK ("items"."visibility" IN ('workspace', 'private'));
