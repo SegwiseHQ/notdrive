@@ -83,7 +83,6 @@ export const items = sqliteTable(
     drive_file_id: text('drive_file_id'),
     parent_id: text('parent_id'),
     rank: text('rank').notNull(),
-    is_favorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
     is_archived: integer('is_archived', { mode: 'boolean' }).notNull().default(false),
     archived_at: integer('archived_at'),
     body: text('body'),
@@ -120,6 +119,21 @@ export const item_tags = sqliteTable(
   (t) => ({
     pk: primaryKey({ columns: [t.item_id, t.tag_id] }),
     idxTag: index('item_tags_tag').on(t.tag_id),
+  }),
+);
+
+// Per-user starring. Mirror of postgres user_item_favorites.
+export const user_item_favorites = sqliteTable(
+  'user_item_favorites',
+  {
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    created_at: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.user_id, t.item_id] }),
+    idxWsUser: index('uif_ws_user').on(t.workspace_id, t.user_id),
   }),
 );
 

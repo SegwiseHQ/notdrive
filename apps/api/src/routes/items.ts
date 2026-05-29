@@ -31,13 +31,15 @@ app.use('*', requireAuth, requireWorkspace('viewer'));
 
 app.get('/', zValidator('query', itemListQuerySchema), async (c) => {
   const m = c.get('membership');
+  const user = c.get('user');
   const q = c.req.valid('query');
-  return c.json(await listItems(m.workspace_id, q));
+  return c.json(await listItems(m.workspace_id, user.id, q));
 });
 
 app.get('/:id', async (c) => {
   const m = c.get('membership');
-  return c.json(await getItem(m.workspace_id, c.req.param('id')));
+  const user = c.get('user');
+  return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
 });
 
 app.post('/', requireWorkspace('member'), zValidator('json', itemCreateSchema), async (c) => {
@@ -55,7 +57,7 @@ app.post('/', requireWorkspace('member'), zValidator('json', itemCreateSchema), 
   if (body.drive_file_id) {
     await fetchAndCacheDriveFile(m.workspace_id, user.id, body.drive_file_id).catch(() => {});
   }
-  return c.json(await getItem(m.workspace_id, id), 201);
+  return c.json(await getItem(m.workspace_id, user.id, id), 201);
 });
 
 app.patch(
@@ -66,7 +68,7 @@ app.patch(
     const m = c.get('membership');
     const user = c.get('user');
     await patchItem(m.workspace_id, user.id, c.req.param('id'), c.req.valid('json'));
-    return c.json(await getItem(m.workspace_id, c.req.param('id')));
+    return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
   },
 );
 
@@ -78,7 +80,7 @@ app.patch(
     const m = c.get('membership');
     const user = c.get('user');
     await moveItem(m.workspace_id, user.id, c.req.param('id'), c.req.valid('json'));
-    return c.json(await getItem(m.workspace_id, c.req.param('id')));
+    return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
   },
 );
 
@@ -112,7 +114,7 @@ app.post('/:id/restore', requireWorkspace('member'), async (c) => {
   const m = c.get('membership');
   const user = c.get('user');
   await restoreItem(m.workspace_id, user.id, c.req.param('id'));
-  return c.json(await getItem(m.workspace_id, c.req.param('id')));
+  return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
 });
 
 app.post(
@@ -125,7 +127,7 @@ app.post(
     const { drive_file_id } = c.req.valid('json');
     await linkDriveFile(m.workspace_id, user.id, c.req.param('id'), drive_file_id);
     await fetchAndCacheDriveFile(m.workspace_id, user.id, drive_file_id).catch(() => {});
-    return c.json(await getItem(m.workspace_id, c.req.param('id')));
+    return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
   },
 );
 
@@ -133,7 +135,7 @@ app.delete('/:id/link', requireWorkspace('member'), async (c) => {
   const m = c.get('membership');
   const user = c.get('user');
   await unlinkDriveFile(m.workspace_id, user.id, c.req.param('id'));
-  return c.json(await getItem(m.workspace_id, c.req.param('id')));
+  return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
 });
 
 export default app;

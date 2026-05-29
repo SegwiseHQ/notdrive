@@ -11,8 +11,9 @@ app.use('*', requireAuth, requireWorkspace('viewer'));
 
 app.get('/', zValidator('query', searchQuerySchema), async (c) => {
   const m = c.get('membership');
+  const user = c.get('user');
   const { q, limit } = c.req.valid('query');
-  return c.json(await search(m.workspace_id, q, limit));
+  return c.json(await search(m.workspace_id, user.id, q, limit));
 });
 
 export default app;

@@ -97,7 +97,6 @@ export const items = pgTable(
     drive_file_id: text('drive_file_id'),
     parent_id: text('parent_id'),
     rank: text('rank').notNull(),
-    is_favorite: boolean('is_favorite').notNull().default(false),
     is_archived: boolean('is_archived').notNull().default(false),
     archived_at: ts('archived_at'),
     body: text('body'),
@@ -134,6 +133,24 @@ export const item_tags = pgTable(
   (t) => ({
     pk: primaryKey({ columns: [t.item_id, t.tag_id] }),
     idxTag: index('item_tags_tag').on(t.tag_id),
+  }),
+);
+
+// Per-user starring. Replaces the legacy workspace-wide items.is_favorite flag.
+// PK is (user_id, item_id) so each user has at most one favorite row per item.
+// Cascades from users + items so leaving a workspace or deleting an item both
+// clean these up automatically.
+export const user_item_favorites = pgTable(
+  'user_item_favorites',
+  {
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.user_id, t.item_id] }),
+    idxWsUser: index('uif_ws_user').on(t.workspace_id, t.user_id),
   }),
 );
 
