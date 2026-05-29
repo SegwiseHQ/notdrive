@@ -1,6 +1,6 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
-import { hydrate } from './items.js';
+import { hydrate, visibilityClause } from './items.js';
 
 export async function listRecent(workspaceId: string, userId: string, limit = 40) {
   const events = await db
@@ -32,7 +32,7 @@ export async function listRecent(workspaceId: string, userId: string, limit = 40
   const itemRows = await db
     .select()
     .from(schema.items)
-    .where(eq(schema.items.workspace_id, workspaceId));
+    .where(and(eq(schema.items.workspace_id, workspaceId), visibilityClause(userId)));
   const byId = new Map(itemRows.map((r) => [r.id, r]));
 
   const pairs = picked

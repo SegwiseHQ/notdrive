@@ -87,6 +87,9 @@ export const items = sqliteTable(
     archived_at: integer('archived_at'),
     body: text('body'),
     appdata_file_id: text('appdata_file_id'),
+    // Mirror of postgres visibility/owner_id columns. See schema.postgres.ts.
+    visibility: text('visibility').notNull().default('workspace'),
+    owner_id: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
     created_by: text('created_by').notNull().references(() => users.id),
     created_at: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
     updated_at: integer('updated_at').notNull().default(sql`(unixepoch() * 1000)`),
@@ -95,6 +98,7 @@ export const items = sqliteTable(
     idxParent: index('items_parent').on(t.workspace_id, t.parent_id, t.rank),
     idxArchived: index('items_archived').on(t.workspace_id, t.is_archived),
     idxDriveFile: index('items_drive_file').on(t.drive_file_id),
+    idxVisibility: index('items_visibility').on(t.workspace_id, t.visibility, t.owner_id),
   }),
 );
 

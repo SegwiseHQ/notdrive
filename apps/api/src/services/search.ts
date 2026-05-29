@@ -2,7 +2,7 @@ import { type Ast, parseQuery } from '@notdrive/shared';
 import type { ItemDTO } from '@notdrive/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db, driver, schema } from '../db/index.js';
-import { hydrate } from './items.js';
+import { hydrate, visibilityClause } from './items.js';
 
 /**
  * Execute a free-text smart query against items in a workspace.
@@ -19,10 +19,12 @@ export async function search(workspaceId: string, userId: string, queryText: str
   const ast = parseQuery(queryText);
   if (ast.kind === 'empty') return [];
 
+  // Universe is restricted to items the caller can see, so private items
+  // belonging to others never enter the candidate set.
   const allRows = await db
     .select({ id: schema.items.id })
     .from(schema.items)
-    .where(eq(schema.items.workspace_id, workspaceId));
+    .where(and(eq(schema.items.workspace_id, workspaceId), visibilityClause(userId)));
   const universe = new Set(allRows.map((r) => r.id));
   if (universe.size === 0) return [];
 
@@ -33,7 +35,13 @@ export async function search(workspaceId: string, userId: string, queryText: str
   const rows = await db
     .select()
     .from(schema.items)
-    .where(and(eq(schema.items.workspace_id, workspaceId), inArray(schema.items.id, ids)));
+    .where(
+      and(
+        eq(schema.items.workspace_id, workspaceId),
+        visibilityClause(userId),
+        inArray(schema.items.id, ids),
+      ),
+    );
   return hydrate(workspaceId, userId, rows);
 }
 

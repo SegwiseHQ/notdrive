@@ -53,6 +53,7 @@ app.post('/', requireWorkspace('member'), zValidator('json', itemCreateSchema), 
     title: body.title,
     parentId: body.parent_id ?? null,
     driveFileId: body.drive_file_id ?? null,
+    visibility: body.visibility,
   });
   if (body.drive_file_id) {
     await fetchAndCacheDriveFile(m.workspace_id, user.id, body.drive_file_id).catch(() => {});

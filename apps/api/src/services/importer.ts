@@ -37,6 +37,10 @@ export async function importMarkdownZip(
   workspaceId: string,
   userId: string,
   zipBuffer: Buffer,
+  // When true, every page created by this import is private to the importing user.
+  // Top-level items get visibility='private'+owner_id=userId; descendants inherit
+  // via createItem's parent lookup (so we only need to mark the root pages).
+  options: { private?: boolean } = {},
 ): Promise<ImportResult> {
   const zip = new AdmZip(zipBuffer);
   const entries = zip.getEntries();
@@ -101,6 +105,11 @@ export async function importMarkdownZip(
   // Map from folder path (joined with /) to created item id.
   const folderIds = new Map<string, string>();
 
+  // Only the top of the import tree carries an explicit visibility hint.
+  // Deeper items pass undefined and inherit from their parent via createItem's
+  // visibility-inheritance logic.
+  const rootVisibility = options.private ? 'private' : undefined;
+
   async function ensureFolder(segments: string[]): Promise<string | null> {
     if (segments.length === 0) return null;
     const key = segments.join('/');
@@ -114,6 +123,7 @@ export async function importMarkdownZip(
       title: titleFromFolderName(segments[segments.length - 1] ?? 'Folder'),
       parentId,
       driveFileId: null,
+      visibility: parentId === null ? rootVisibility : undefined,
     });
     folderIds.set(key, id);
     return id;
@@ -140,6 +150,8 @@ export async function importMarkdownZip(
         parentId,
         driveFileId: null,
         body: html,
+        // Only top-level entries carry the explicit hint; children inherit.
+        visibility: parentId === null ? rootVisibility : undefined,
       });
       // Register so later `<base>/child.md` files reuse this page as parent
       // instead of triggering ensureFolder() to create an empty stub.
