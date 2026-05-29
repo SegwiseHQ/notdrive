@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -99,6 +99,8 @@ export const items = sqliteTable(
     idxArchived: index('items_archived').on(t.workspace_id, t.is_archived),
     idxDriveFile: index('items_drive_file').on(t.drive_file_id),
     idxVisibility: index('items_visibility').on(t.workspace_id, t.visibility, t.owner_id),
+    // Defense in depth: catches bad writes that bypass app-level zod validation.
+    visibilityCheck: check('items_visibility_check', sql`${t.visibility} IN ('workspace', 'private')`),
   }),
 );
 

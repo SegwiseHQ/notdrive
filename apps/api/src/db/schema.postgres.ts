@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  check,
   index,
   jsonb,
   pgTable,
@@ -116,6 +117,8 @@ export const items = pgTable(
     idxDriveFile: index('items_drive_file').on(t.drive_file_id),
     // Speeds up the private-items filter on every list/search.
     idxVisibility: index('items_visibility').on(t.workspace_id, t.visibility, t.owner_id),
+    // Defense in depth: catches bad writes that bypass app-level zod validation.
+    visibilityCheck: check('items_visibility_check', sql`${t.visibility} IN ('workspace', 'private')`),
   }),
 );
 
