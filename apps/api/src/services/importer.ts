@@ -76,6 +76,27 @@ export async function importMarkdownZip(
     mdEntries.push({ path: name, segments, raw });
   }
 
+  // Dedupe — some zips (e.g. Outline exports) list the same path multiple times.
+  // Without this, every duplicate entry creates a second page with identical
+  // content under the same parent.
+  const seen = new Set<string>();
+  const beforeDedupe = mdEntries.length;
+  const deduped: MdEntry[] = [];
+  for (const e of mdEntries) {
+    const key = e.segments.join('/').toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(e);
+  }
+  if (deduped.length !== beforeDedupe) {
+    logger.warn(
+      { beforeDedupe, afterDedupe: deduped.length },
+      'importMarkdownZip: dropped duplicate zip entries',
+    );
+  }
+  mdEntries.length = 0;
+  mdEntries.push(...deduped);
+
   // Create folder pages first so children can reference them as parent_id.
   // Map from folder path (joined with /) to created item id.
   const folderIds = new Map<string, string>();
@@ -98,6 +119,12 @@ export async function importMarkdownZip(
     return id;
   }
 
+  // Shallow → deep so parent docs are created before any of their children.
+  // Outline's export ships a doc with children as BOTH `Parent.md` and a folder
+  // `Parent/` with the children inside; processing depth-ordered + registering
+  // each new page under its base-name key avoids the empty-stub duplicate.
+  mdEntries.sort((a, b) => a.segments.length - b.segments.length);
+
   for (const entry of mdEntries) {
     try {
       const folderSegs = entry.segments.slice(0, -1);
@@ -105,7 +132,7 @@ export async function importMarkdownZip(
       const parentId = folderSegs.length ? await ensureFolder(folderSegs) : null;
       const title = titleFromMarkdown(entry.raw) ?? titleFromFileName(fileSeg);
       const html = await md.parse(entry.raw, { async: true });
-      await createItem({
+      const id = await createItem({
         workspaceId,
         userId,
         type: 'page',
@@ -114,6 +141,11 @@ export async function importMarkdownZip(
         driveFileId: null,
         body: html,
       });
+      // Register so later `<base>/child.md` files reuse this page as parent
+      // instead of triggering ensureFolder() to create an empty stub.
+      const baseName = fileSeg.replace(/\.md$/i, '');
+      const baseKey = [...folderSegs, baseName].join('/');
+      folderIds.set(baseKey, id);
       result.created++;
     } catch (err) {
       result.errors.push({ path: entry.path, reason: (err as Error).message });

@@ -27,7 +27,7 @@ export function DriveFilePage() {
   const webViewLink = file?.web_view_link ?? null;
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-12 py-10">
+    <div className="mx-auto flex min-h-0 w-full flex-1 flex-col px-8 py-8">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div className="min-w-0">
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80">Drive file</div>
@@ -105,12 +105,15 @@ export function DriveFilePage() {
         </div>
       </div>
 
-      <div className="group relative flex-1 overflow-hidden rounded-lg border border-border bg-muted/30">
+      <div
+        className="group relative overflow-hidden rounded-lg border border-border bg-muted/30"
+        style={{ resize: 'vertical', height: '80vh', minHeight: '40vh' }}
+      >
         <iframe
           key={fileId}
           title={file?.name ?? ''}
           src={`https://drive.google.com/file/d/${fileId}/preview`}
-          className="h-[75vh] w-full border-0"
+          className="h-full w-full border-0"
           allow="autoplay"
         />
         {webViewLink && (

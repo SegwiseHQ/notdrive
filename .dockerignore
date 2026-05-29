@@ -1,0 +1,44 @@
+**/node_modules
+**/dist
+**/.turbo
+**/.cache
+**/coverage
+**/.next
+
+# Local DB files & dev artifacts
+**/*.db
+**/*.db-journal
+**/*.db-shm
+**/*.db-wal
+apps/api/notdrive.db
+
+# Env / secrets
+# NOTE: .env at the repo root IS copied into the image (see Dockerfile).
+# Do not push this image to a registry others can pull from — secrets are
+# embedded in image layers and visible to anyone with pull access.
+.env.local
+.env.development
+.env.test
+.env.*.local
+!.env.example
+
+# VCS / IDE / OS
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+
+# Tests / docs not needed at runtime
+**/*.log
+**/*.test.ts
+**/*.spec.ts
+apps/api/test
+packages/shared/test
+README.md
+DESIGN.md
+icon.png
+
+# Web app (separate deploy)
+apps/web
