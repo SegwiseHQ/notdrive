@@ -3,11 +3,21 @@ import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { useRef } from 'react';
 import { SlashCommand } from './slashCommand.js';
+import { buildMentionExtension } from './mentionExtension.js';
+import type { MentionItem } from './MentionMenu.js';
 
 interface EditorProps {
   initialBody: string | null;
   onChange: (body: string) => void;
+  /**
+   * Workspace members for @ mentions. Pass an empty array when the list
+   * isn't loaded yet — the popup will say "No workspace members match".
+   * The ref-based getter inside the extension always reads the latest value,
+   * so re-renders with a populated list update automatically.
+   */
+  members?: MentionItem[];
 }
 
 /**
@@ -23,7 +33,12 @@ interface EditorProps {
  * the parent, so we still pick up fresh content for new pages without
  * needing a runtime sync.
  */
-export function PageEditor({ initialBody, onChange }: EditorProps) {
+export function PageEditor({ initialBody, onChange, members = [] }: EditorProps) {
+  // Mutable ref so the mention extension always sees the latest member list
+  // without rebuilding the editor when members load asynchronously.
+  const membersRef = useRef(members);
+  membersRef.current = members;
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -38,6 +53,7 @@ export function PageEditor({ initialBody, onChange }: EditorProps) {
         },
       }),
       SlashCommand,
+      buildMentionExtension(() => membersRef.current),
     ],
     content: initialBody ?? '',
     editorProps: {

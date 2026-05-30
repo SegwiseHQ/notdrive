@@ -1,5 +1,6 @@
 import type { Editor, Range } from '@tiptap/core';
 import {
+  CalendarDays,
   Check,
   CheckSquare,
   Code,
@@ -102,6 +103,21 @@ export const SLASH_ITEMS: SlashItem[] = [
     Icon: Minus,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+  },
+  {
+    title: 'Today',
+    description: "Insert today's date",
+    keywords: ['date', 'today', 'now', 'time'],
+    Icon: CalendarDays,
+    command: ({ editor, range }) => {
+      const today = new Date().toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      // Trailing space so the caret leaves the inserted text cleanly.
+      editor.chain().focus().deleteRange(range).insertContent(`${today} `).run();
+    },
   },
 ];
 
