@@ -2,6 +2,7 @@
   "name": "notdrive",
   "version": "0.0.1",
   "private": true,
+  "license": "MIT",
   "packageManager": "pnpm@9.12.0",
   "engines": {
     "node": ">=22.0.0",
