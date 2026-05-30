@@ -50,6 +50,20 @@ export function ItemPage() {
     queryKey: ['items', wsId, itemId],
     queryFn: () => http.listItems({ parent_id: itemId, archived: false }),
   });
+  // Members list powers the @ mention picker. Cached across page navigations
+  // since membership rarely changes; refetched lazily by TanStack defaults.
+  const membersQuery = useQuery({
+    queryKey: ['workspace-members', wsId],
+    queryFn: () => http.members(wsId),
+    enabled: !!wsId,
+    staleTime: 60_000,
+  });
+  const mentionItems = (membersQuery.data ?? []).map((m) => ({
+    id: m.user_id,
+    label: m.name || m.email,
+    email: m.email,
+    avatar_url: m.avatar_url,
+  }));
 
   const [title, setTitle] = useState('');
   useEffect(() => {
@@ -309,6 +323,7 @@ export function ItemPage() {
           <PageEditor
             key={item.id}
             initialBody={item.body}
+            members={mentionItems}
             onChange={(body) => {
               if (saveTimer.current) clearTimeout(saveTimer.current);
               saveTimer.current = setTimeout(() => {
