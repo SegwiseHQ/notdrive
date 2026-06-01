@@ -239,5 +239,25 @@ export const http = {
     };
   },
 
+  // Upload a binary asset to an item; returns the URL the editor inserts as <img src>.
+  uploadItemAsset: async (itemId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const wsId = localStorage.getItem('notdrive.workspace_id') ?? undefined;
+    const headers = new Headers();
+    if (wsId) headers.set('x-workspace-id', wsId);
+    const res = await fetch(`${apiOrigin()}/items/${encodeURIComponent(itemId)}/assets`, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`${res.status} ${res.statusText}: ${body}`);
+    }
+    return (await res.json()) as { id: string; url: string };
+  },
+
   logout: () => req<{ ok: true }>('/auth/logout', { method: 'POST' }),
 };

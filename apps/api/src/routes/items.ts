@@ -7,6 +7,8 @@ import {
   linkFileSchema,
 } from '@notdrive/shared';
 import { Hono } from 'hono';
+import { db, schema } from '../db/index.js';
+import { newId } from '../util/ids.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
 import {
@@ -137,6 +139,52 @@ app.delete('/:id/link', requireWorkspace('member'), async (c) => {
   const user = c.get('user');
   await unlinkDriveFile(m.workspace_id, user.id, c.req.param('id'));
   return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
+});
+
+// Upload a binary asset (image, etc.) attached to this item. Used by the
+// editor's /image command. Returns { id, url } — caller inserts <img src={url}>.
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const ALLOWED_UPLOAD_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+]);
+app.post('/:id/assets', requireWorkspace('member'), async (c) => {
+  const m = c.get('membership');
+  const user = c.get('user');
+  const id = c.req.param('id');
+
+  // Same visibility-aware lookup pattern as items routes — 404 if the user
+  // can't see this item, so they can't upload into someone else's private page.
+  const item = await getItem(m.workspace_id, user.id, id);
+
+  const form = await c.req.parseBody({ all: false });
+  const file = form.file;
+  if (!(file instanceof File)) {
+    return c.json({ error: 'bad_request', message: 'expected multipart field "file"' }, 400);
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return c.json({ error: 'bad_request', message: `file too large (>${MAX_UPLOAD_BYTES})` }, 400);
+  }
+  const contentType = file.type || 'application/octet-stream';
+  if (!ALLOWED_UPLOAD_TYPES.has(contentType)) {
+    return c.json({ error: 'bad_request', message: `unsupported content-type: ${contentType}` }, 400);
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const assetId = newId();
+  await db.insert(schema.item_assets).values({
+    id: assetId,
+    workspace_id: m.workspace_id,
+    item_id: item.id,
+    content_type: contentType,
+    byte_size: bytes.byteLength,
+    data: bytes,
+  });
+
+  return c.json({ id: assetId, url: `/item-assets/${assetId}` }, 201);
 });
 
 export default app;

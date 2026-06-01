@@ -322,6 +322,7 @@ export function ItemPage() {
         <div className="mt-8">
           <PageEditor
             key={item.id}
+            itemId={item.id}
             initialBody={item.body}
             members={mentionItems}
             onChange={(body) => {

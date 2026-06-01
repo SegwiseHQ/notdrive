@@ -36,6 +36,13 @@
       "when": 1780079848473,
       "tag": "0004_mean_justice",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1780297566738,
+      "tag": "0005_yielding_champions",
+      "breakpoints": true
     }
   ]
 }

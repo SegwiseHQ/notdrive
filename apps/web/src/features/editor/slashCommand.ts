@@ -13,19 +13,33 @@ type SuggestionProps = {
   clientRect?: (() => DOMRect | null) | null;
 };
 
-export const SlashCommand = Extension.create({
+// Holds the current SlashCommand options so the static suggestion config
+// (built once at addOptions time) can read fresh option values like itemId.
+const extOpts: { itemId?: string } = {};
+
+export const SlashCommand = Extension.create<{ itemId?: string }>({
   name: 'slashCommand',
 
   addOptions() {
     return {
+      // Item id is needed for commands that upload server-side (e.g. /image).
+      // Undefined means upload-requiring commands no-op silently.
+      itemId: undefined,
       suggestion: {
         char: '/',
         startOfLine: false,
         command: ({ editor, range, props }: { editor: Editor; range: Range; props: SlashItem }) => {
-          props.command({ editor, range });
+          props.command({ editor, range, itemId: extOpts.itemId });
         },
       } satisfies Partial<SuggestionOptions<SlashItem>>,
     };
+  },
+
+  onCreate() {
+    extOpts.itemId = this.options.itemId;
+  },
+  onUpdate() {
+    extOpts.itemId = this.options.itemId;
   },
 
   addProseMirrorPlugins() {
