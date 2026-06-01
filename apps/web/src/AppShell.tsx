@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { CommandPalette } from './commands/CommandPalette.js';
 import { useHotkeysGlobal } from './commands/hotkeys.js';
 import { http } from './lib/http.js';
@@ -14,7 +14,6 @@ import { cn } from './lib/utils.js';
 export function AppShell() {
   useApplyTheme();
   useHotkeysGlobal();
-  const navigate = useNavigate();
   const { wsId } = useParams();
   const sidebarCollapsed = useUi((s) => s.sidebarCollapsed);
   const sidebarWidth = useUi((s) => s.sidebarWidth);
@@ -36,8 +35,9 @@ export function AppShell() {
   if (!wsId) {
     const defaultWs = me.workspaces[0];
     if (!defaultWs) return <div className="p-8 text-muted-foreground">Something went wrong. Log out and retry.</div>;
-    navigate(`/w/${defaultWs.id}`, { replace: true });
-    return null;
+    // Declarative redirect — calling navigate() during render fires a setState
+    // on the RouterProvider mid-render and triggers a React warning.
+    return <Navigate to={`/w/${defaultWs.id}`} replace />;
   }
 
   return (
