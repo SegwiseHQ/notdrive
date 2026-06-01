@@ -7,6 +7,7 @@ import {
   Lock,
   LockOpen,
   MoreHorizontal,
+  RefreshCw,
   Share2,
   Star,
   Trash2,
@@ -20,6 +21,7 @@ import { PageEditor } from '../features/editor/Editor.js';
 import { PageShareDialog } from '../features/share/PageShareDialog.js';
 import { ShareDialog } from '../features/share/ShareDialog.js';
 import { TagEditor } from '../features/tags/TagEditor.js';
+import { apiOrigin } from '../lib/api.js';
 import { useNavigateToParent } from '../lib/nav.js';
 import { http } from '../lib/http.js';
 import { useSelection } from '../lib/store.js';
@@ -50,6 +52,66 @@ export function ItemPage() {
     queryKey: ['items', wsId, itemId],
     queryFn: () => http.listItems({ parent_id: itemId, archived: false }),
   });
+  const meQuery = useQuery({ queryKey: ['me'], queryFn: http.me });
+  const currentUserId = meQuery.data?.user.id;
+
+  // Live updates: subscribe to /item-stream/:id while this page is open.
+  // We DON'T auto-clobber the editor on remote changes — instead surface a
+  // banner so the user can decide when to refresh (avoids stomping on
+  // in-progress typing).
+  const [remoteUpdate, setRemoteUpdate] = useState<{ kind: string; at: number } | null>(null);
+  // Bumped when the user accepts a remote update — used in the editor's
+  // `key` so it remounts with the freshly-fetched body. We can't react to
+  // body changes alone (would clobber typing on every save); the user opts
+  // in via the Refresh button.
+  const [remountToken, setRemountToken] = useState(0);
+  // Debounce timer for the banner. Editor saves are debounced at ~600 ms, so
+  // a typing burst from the other user produces a stream of events. We wait
+  // BANNER_QUIET_MS after the last event before surfacing the banner, so it
+  // appears once activity has settled rather than flashing on every keystroke.
+  const BANNER_QUIET_MS = 2000;
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!itemId || !currentUserId || !wsId) return;
+    // EventSource can't set custom headers, so workspace id rides on the
+    // query string — requireWorkspace's middleware reads `?ws=` as a fallback.
+    const url = `${apiOrigin()}/item-stream/${encodeURIComponent(itemId)}?ws=${encodeURIComponent(wsId)}`;
+    const es = new EventSource(url, { withCredentials: true });
+    es.addEventListener('change', (ev) => {
+      try {
+        const data = JSON.parse((ev as MessageEvent).data) as {
+          kind: string;
+          by: string;
+          at: number;
+        };
+        // Suppress self-events — saves from this tab don't need a banner.
+        if (data.by === currentUserId) return;
+        if (data.kind === 'archived') {
+          // Archive isn't debounced — bounce immediately.
+          toast.info('This page was archived');
+          goToParent(itemQuery.data?.parent_id);
+          return;
+        }
+        // Reset the timer on every event; banner appears only after
+        // BANNER_QUIET_MS of silence.
+        if (bannerTimer.current) clearTimeout(bannerTimer.current);
+        bannerTimer.current = setTimeout(() => {
+          setRemoteUpdate({ kind: data.kind, at: data.at });
+        }, BANNER_QUIET_MS);
+      } catch {
+        // Malformed events shouldn't crash the listener.
+      }
+    });
+    // Auto-reconnect is built into EventSource on transient errors; we just
+    // log + let it retry. Hard errors mean the stream is permanently dead.
+    es.onerror = () => {
+      // EventSource logs its own errors. Just no-op so we don't spam toasts.
+    };
+    return () => {
+      es.close();
+      if (bannerTimer.current) clearTimeout(bannerTimer.current);
+    };
+  }, [itemId, wsId, currentUserId, itemQuery.data?.parent_id, goToParent]);
   // Members list powers the @ mention picker. Cached across page navigations
   // since membership rarely changes; refetched lazily by TanStack defaults.
   const membersQuery = useQuery({
@@ -68,7 +130,9 @@ export function ItemPage() {
   const [title, setTitle] = useState('');
   useEffect(() => {
     if (itemQuery.data) setTitle(itemQuery.data.title);
-  }, [itemQuery.data?.id]);
+    // `remountToken` triggers a fresh title sync after a Refresh click so the
+    // input picks up the remote change without a full page reload.
+  }, [itemQuery.data?.id, remountToken]);
 
   const saveSeq = useRef(0);
   const patch = useMutation({
@@ -131,6 +195,31 @@ export function ItemPage() {
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[880px] flex-col px-12 py-10">
+      {remoteUpdate && (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          <span>
+            Someone else updated this page.
+            {/* Don't auto-reload — the local editor may have unsaved typing. */}
+          </span>
+          <button
+            onClick={async () => {
+              // Refetch the item + children, THEN bump the remount token so
+              // the editor remounts with the freshly-fetched body. The await
+              // matters: without it, the remount happens before the new data
+              // lands and the editor seeds with the old initialBody again.
+              await Promise.all([
+                qc.invalidateQueries({ queryKey: ['item', itemId] }),
+                qc.invalidateQueries({ queryKey: ['items', wsId, itemId] }),
+              ]);
+              setRemountToken((t) => t + 1);
+              setRemoteUpdate(null);
+            }}
+            className="flex shrink-0 items-center gap-1 rounded border border-amber-500/40 bg-amber-500/20 px-2 py-1 font-medium hover:bg-amber-500/30"
+          >
+            <RefreshCw className="size-3" /> Refresh
+          </button>
+        </div>
+      )}
       <div className="mb-2 flex items-center justify-end gap-1">
         {item.visibility === 'private' && (
           <span
@@ -321,7 +410,10 @@ export function ItemPage() {
       ) : (
         <div className="mt-8">
           <PageEditor
-            key={item.id}
+            // Composite key forces a remount on Refresh-banner clicks so the
+            // editor picks up the new body. Plain navigation (different item)
+            // also remounts via the id change.
+            key={`${item.id}:${remountToken}`}
             itemId={item.id}
             initialBody={item.body}
             members={mentionItems}

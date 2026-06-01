@@ -7,6 +7,7 @@ import { badRequest, notFound } from '../util/errors.js';
 import { newId, now } from '../util/ids.js';
 import { logger } from '../util/logger.js';
 import { getWorkspaceAutoShare, shareFileWithMembers } from './autoShare.js';
+import { publishItemEvent } from './itemStream.js';
 
 export interface ItemCreateArgs {
   workspaceId: string;
@@ -294,6 +295,7 @@ export async function patchItem(
     reason: null,
     created_at: ts,
   });
+  publishItemEvent(id, { kind: 'updated', by: userId, at: ts });
 
   // Mirror body into the user's Drive appDataFolder for durability.
   // Fire-and-forget so page saves stay snappy. Skip if the body didn't
@@ -411,6 +413,7 @@ export async function moveItem(
   if (inheritedVisibility) {
     await cascadeVisibility(workspaceId, id, inheritedVisibility, inheritedOwnerId, ts);
   }
+  publishItemEvent(id, { kind: 'moved', by: userId, at: ts });
 }
 
 export async function archiveItem(workspaceId: string, userId: string, id: string, reason?: string) {
@@ -430,6 +433,7 @@ export async function archiveItem(workspaceId: string, userId: string, id: strin
     reason: reason ?? null,
     created_at: ts,
   });
+  publishItemEvent(id, { kind: 'archived', by: userId, at: ts });
 }
 
 export async function restoreItem(workspaceId: string, userId: string, id: string) {
@@ -449,6 +453,7 @@ export async function restoreItem(workspaceId: string, userId: string, id: strin
     reason: null,
     created_at: ts,
   });
+  publishItemEvent(id, { kind: 'restored', by: userId, at: ts });
 }
 
 export async function purgeItem(workspaceId: string, userId: string, id: string) {
@@ -493,6 +498,7 @@ export async function linkDriveFile(
     reason: null,
     created_at: ts,
   });
+  publishItemEvent(id, { kind: 'linked', by: userId, at: ts });
 
   // Same guard as createItem: don't auto-share Drive files attached to private pages.
   if (existing.visibility !== 'private') {
@@ -527,6 +533,7 @@ export async function unlinkDriveFile(workspaceId: string, userId: string, id: s
     reason: null,
     created_at: ts,
   });
+  publishItemEvent(id, { kind: 'unlinked', by: userId, at: ts });
 }
 
 export async function recordOpen(workspaceId: string, userId: string, id: string) {
