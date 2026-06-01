@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { toast } from 'sonner';
-import { apiOrigin, http } from '../../lib/http.js';
+import { apiOrigin } from '../../lib/api.js';
+import { http } from '../../lib/http.js';
 
 export interface SlashItem {
   title: string;
