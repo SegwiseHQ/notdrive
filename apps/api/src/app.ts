@@ -17,6 +17,7 @@ import search from './routes/search.js';
 import drive from './routes/drive.js';
 import importRoutes from './routes/import.js';
 import itemAssets from './routes/itemAssets.js';
+import itemStream from './routes/itemStream.js';
 import recent from './routes/recent.js';
 
 export function buildApp() {
@@ -40,6 +41,7 @@ export function buildApp() {
     .route('/drive', drive)
     .route('/import', importRoutes)
     .route('/item-assets', itemAssets)
+    .route('/item-stream', itemStream)
     .route('/recent', recent);
 
   app.onError((err, c) => {
