@@ -317,6 +317,10 @@ async function ingestAndRewriteImages(args: {
         );
         return null;
       }
+      // Relative URL. The frontend (Vite dev / Amplify prod) is configured
+      // to proxy /item-assets/* to the API origin — see vite.config.ts and
+      // the Amplify rewrite rule in the README. Storing relative keeps the
+      // HTML portable across deployments.
       const newSrc = `/item-assets/${assetId}`;
       return { full: match[0], newTag: match[0]!.replace(src, newSrc) };
     }),

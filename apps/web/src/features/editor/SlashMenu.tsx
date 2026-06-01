@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { toast } from 'sonner';
-import { apiOrigin } from '../../lib/api.js';
 import { http } from '../../lib/http.js';
 
 export interface SlashItem {
@@ -149,9 +148,10 @@ export const SLASH_ITEMS: SlashItem[] = [
         const uploadingId = toast.loading('Uploading image…');
         try {
           const { url } = await http.uploadItemAsset(itemId, file);
-          // url is relative to the API origin; need an absolute URL for <img>.
-          const absolute = `${apiOrigin()}${url}`;
-          editor.chain().focus().setImage({ src: absolute }).run();
+          // Insert as a relative URL. The frontend (Vite dev / Amplify prod)
+          // proxies /item-assets/* to the API origin — same approach used by
+          // the importer so HTML stays portable across deployments.
+          editor.chain().focus().setImage({ src: url }).run();
           toast.success('Image inserted', { id: uploadingId });
         } catch (err) {
           toast.error(`Upload failed: ${(err as Error).message}`, { id: uploadingId });
