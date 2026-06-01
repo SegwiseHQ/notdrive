@@ -280,6 +280,19 @@ pnpm --filter @notdrive/web build
 
 Set `VITE_API_ORIGIN` at **build time** (it's compiled into the bundle).
 
+**One rewrite rule required**: imported and uploaded images are stored with
+relative URLs like `/item-assets/<id>` so the same HTML works in any
+deployment. The frontend host needs to rewrite that path to the API:
+
+| Host | How |
+|---|---|
+| AWS Amplify | Hosting → Rewrites and redirects → add: source `/item-assets/<*>`, target `https://api.example.com/item-assets/<*>`, type `200 (Rewrite)` |
+| Cloudflare Pages | `_redirects` file: `/item-assets/* https://api.example.com/item-assets/:splat 200` |
+| Netlify | `_redirects` file: same syntax as Cloudflare Pages |
+| Nginx | `location /item-assets/ { proxy_pass https://api.example.com; }` |
+
+Vite dev does this automatically via `vite.config.ts`'s proxy block.
+
 ### Behind a reverse proxy (Traefik / nginx / NLB)
 
 Common setup:

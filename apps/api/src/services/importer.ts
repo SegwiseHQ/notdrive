@@ -2,7 +2,6 @@ import AdmZip from 'adm-zip';
 import { eq } from 'drizzle-orm';
 import { Marked } from 'marked';
 import { db, schema } from '../db/index.js';
-import { loadServerEnv } from '../env.js';
 import { createItem } from './items.js';
 import { logger } from '../util/logger.js';
 import { newId } from '../util/ids.js';
@@ -285,11 +284,6 @@ async function ingestAndRewriteImages(args: {
   if (!html.includes('<img')) return html;
   if (imageMap.size === 0) return html;
 
-  // Use the configured API_ORIGIN so the rewritten src works regardless of
-  // where the frontend is served from. Stored HTML carries the absolute URL,
-  // matching the /image slash command upload path.
-  const apiOrigin = loadServerEnv().API_ORIGIN;
-
   // Find <img> tags and try to rewrite each one. Async because we hit the DB
   // per asset — use replaceAsync via Promise.all over matches.
   const imgRe = /<img\b([^>]*?)\bsrc="([^"]+)"([^>]*)>/g;
@@ -323,7 +317,11 @@ async function ingestAndRewriteImages(args: {
         );
         return null;
       }
-      const newSrc = `${apiOrigin}/item-assets/${assetId}`;
+      // Relative URL. The frontend (Vite dev / Amplify prod) is configured
+      // to proxy /item-assets/* to the API origin — see vite.config.ts and
+      // the Amplify rewrite rule in the README. Storing relative keeps the
+      // HTML portable across deployments.
+      const newSrc = `/item-assets/${assetId}`;
       return { full: match[0], newTag: match[0]!.replace(src, newSrc) };
     }),
   );
