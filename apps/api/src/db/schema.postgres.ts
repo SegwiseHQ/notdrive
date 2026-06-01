@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   check,
+  customType,
   index,
   jsonb,
   pgTable,
@@ -13,6 +14,13 @@ import {
 
 // Use `bigint` stored as number for epoch-ms to match SQLite integer column.
 const ts = (name: string) => bigint(name, { mode: 'number' });
+
+// drizzle-pg has no first-class bytea type; this is the standard shim.
+const bytea = customType<{ data: Buffer; default: false }>({
+  dataType() {
+    return 'bytea';
+  },
+});
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -174,6 +182,28 @@ export const views = pgTable('views', {
   layout: text('layout').notNull().default('list'),
   created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
 });
+
+// Binary blobs (typically images) attached to an item — produced by the
+// markdown-zip importer when the zip contains image files referenced from
+// pages. ACL is derived from the parent item at read time (no duplicated
+// visibility column to keep in sync). Cascade-deletes when the owning item
+// is deleted.
+export const item_assets = pgTable(
+  'item_assets',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    content_type: text('content_type').notNull(),
+    byte_size: bigint('byte_size', { mode: 'number' }).notNull(),
+    data: bytea('data').notNull(),
+    created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
+  },
+  (t) => ({
+    idxWs: index('item_assets_ws').on(t.workspace_id),
+    idxItem: index('item_assets_item').on(t.item_id),
+  }),
+);
 
 export const item_events = pgTable(
   'item_events',

@@ -1,3 +1,4 @@
+import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
@@ -11,6 +12,8 @@ import type { MentionItem } from './MentionMenu.js';
 interface EditorProps {
   initialBody: string | null;
   onChange: (body: string) => void;
+  /** Item id this editor is editing — required for /image uploads. */
+  itemId?: string;
   /**
    * Workspace members for @ mentions. Pass an empty array when the list
    * isn't loaded yet — the popup will say "No workspace members match".
@@ -33,7 +36,7 @@ interface EditorProps {
  * the parent, so we still pick up fresh content for new pages without
  * needing a runtime sync.
  */
-export function PageEditor({ initialBody, onChange, members = [] }: EditorProps) {
+export function PageEditor({ initialBody, onChange, itemId, members = [] }: EditorProps) {
   // Mutable ref so the mention extension always sees the latest member list
   // without rebuilding the editor when members load asynchronously.
   const membersRef = useRef(members);
@@ -44,6 +47,13 @@ export function PageEditor({ initialBody, onChange, members = [] }: EditorProps)
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
       }),
+      // Allow inline images. The /image slash command uploads via the API
+      // and inserts an <img src="/item-assets/:id"> node here.
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+        HTMLAttributes: { class: 'rounded-md border border-border' },
+      }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Placeholder.configure({
@@ -52,7 +62,7 @@ export function PageEditor({ initialBody, onChange, members = [] }: EditorProps)
           return "Type '/' for commands";
         },
       }),
-      SlashCommand,
+      SlashCommand.configure({ itemId }),
       buildMentionExtension(() => membersRef.current),
     ],
     content: initialBody ?? '',

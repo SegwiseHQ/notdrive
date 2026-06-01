@@ -1,11 +1,27 @@
 import AdmZip from 'adm-zip';
+import { eq } from 'drizzle-orm';
 import { Marked } from 'marked';
+import { db, schema } from '../db/index.js';
 import { createItem } from './items.js';
 import { logger } from '../util/logger.js';
+import { newId } from '../util/ids.js';
 
 const MAX_TOTAL_UNCOMPRESSED_BYTES = 50 * 1024 * 1024; // 50 MB
 const MAX_FILES = 1000;
 const MAX_BODY_BYTES = 400_000; // matches the 500KB cap on items.body w/ headroom
+
+// Image handling. Generous per-image cap; aggregate cap stops a malicious
+// zip from filling the DB.
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_TOTAL_IMAGE_BYTES = 500 * 1024 * 1024; // 500 MB
+const IMAGE_CONTENT_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+};
 
 const md = new Marked({
   gfm: true,
@@ -47,17 +63,45 @@ export async function importMarkdownZip(
   const result: ImportResult = { created: 0, skipped: 0, total_files: 0, errors: [] };
 
   const mdEntries: MdEntry[] = [];
+  // path (lowercased) -> bytes + content-type. Lookup map for resolving
+  // <img src> in the markdown HTML to actual zip-embedded image data.
+  const imageMap = new Map<string, { bytes: Buffer; contentType: string }>();
   let totalBytes = 0;
+  let totalImageBytes = 0;
 
   for (const e of entries) {
     if (e.isDirectory) continue;
     result.total_files++;
     const name = e.entryName;
-    if (!name.toLowerCase().endsWith('.md')) {
+    if (name.includes('__MACOSX/') || name.split('/').some((s) => s.startsWith('.'))) {
       result.skipped++;
       continue;
     }
-    if (name.includes('__MACOSX/') || name.split('/').some((s) => s.startsWith('.'))) {
+
+    // Image files: stash for later rewrite. Skip files outside our known
+    // image content-types — covers PDFs/audio/etc. that some exports include.
+    const lowerName = name.toLowerCase();
+    const ext = lowerName.slice(lowerName.lastIndexOf('.'));
+    if (ext in IMAGE_CONTENT_TYPES) {
+      const size = e.header.size;
+      if (size > MAX_IMAGE_BYTES) {
+        result.errors.push({ path: name, reason: `image too large (${size} > ${MAX_IMAGE_BYTES})` });
+        continue;
+      }
+      totalImageBytes += size;
+      if (totalImageBytes > MAX_TOTAL_IMAGE_BYTES) {
+        result.errors.push({ path: name, reason: 'image total exceeded 500 MB; later images skipped' });
+        // continue processing markdown — just don't ingest more images.
+        continue;
+      }
+      imageMap.set(lowerName, {
+        bytes: e.getData(),
+        contentType: IMAGE_CONTENT_TYPES[ext] ?? 'application/octet-stream',
+      });
+      continue;
+    }
+
+    if (!lowerName.endsWith('.md')) {
       result.skipped++;
       continue;
     }
@@ -141,7 +185,7 @@ export async function importMarkdownZip(
       const fileSeg = entry.segments[entry.segments.length - 1] ?? '';
       const parentId = folderSegs.length ? await ensureFolder(folderSegs) : null;
       const title = titleFromMarkdown(entry.raw) ?? titleFromFileName(fileSeg);
-      const html = await md.parse(entry.raw, { async: true });
+      const renderedHtml = await md.parse(entry.raw, { async: true });
       const id = await createItem({
         workspaceId,
         userId,
@@ -149,7 +193,7 @@ export async function importMarkdownZip(
         title,
         parentId,
         driveFileId: null,
-        body: html,
+        body: renderedHtml,
         // Only top-level entries carry the explicit hint; children inherit.
         visibility: parentId === null ? rootVisibility : undefined,
       });
@@ -158,6 +202,26 @@ export async function importMarkdownZip(
       const baseName = fileSeg.replace(/\.md$/i, '');
       const baseKey = [...folderSegs, baseName].join('/');
       folderIds.set(baseKey, id);
+
+      // Image rewrite — for every <img src="..."> in the rendered HTML,
+      // resolve src relative to this markdown file's location, look up the
+      // matching image in imageMap, insert as an item_asset, and rewrite the
+      // src to point at /item-assets/:assetId. External URLs and unmatched
+      // refs pass through unchanged.
+      const rewritten = await ingestAndRewriteImages({
+        html: renderedHtml,
+        markdownDir: folderSegs,
+        itemId: id,
+        workspaceId,
+        imageMap,
+      });
+      if (rewritten !== renderedHtml) {
+        await db
+          .update(schema.items)
+          .set({ body: rewritten })
+          .where(eq(schema.items.id, id));
+      }
+
       result.created++;
     } catch (err) {
       result.errors.push({ path: entry.path, reason: (err as Error).message });
@@ -197,4 +261,85 @@ function titleFromMarkdown(raw: string): string | null {
   if (!match) return null;
   const text = match[1]?.trim();
   return text && text.length <= 280 ? text : null;
+}
+
+/**
+ * Walk rendered HTML, find <img src="..."> tags whose src is a relative path
+ * matching a known image in the zip, insert each as an item_asset row, and
+ * rewrite the src to /item-assets/:assetId. Untouched srcs (external URLs,
+ * unmatched paths) pass through as-is.
+ *
+ * src paths are resolved relative to `markdownDir` (the segments of the
+ * markdown file's parent folder), which matches how marked emits them.
+ */
+async function ingestAndRewriteImages(args: {
+  html: string;
+  markdownDir: string[];
+  itemId: string;
+  workspaceId: string;
+  imageMap: Map<string, { bytes: Buffer; contentType: string }>;
+}): Promise<string> {
+  const { html, markdownDir, itemId, workspaceId, imageMap } = args;
+  // Quick exit if no images
+  if (!html.includes('<img')) return html;
+  if (imageMap.size === 0) return html;
+
+  // Find <img> tags and try to rewrite each one. Async because we hit the DB
+  // per asset — use replaceAsync via Promise.all over matches.
+  const imgRe = /<img\b([^>]*?)\bsrc="([^"]+)"([^>]*)>/g;
+  const matches: RegExpExecArray[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = imgRe.exec(html)) !== null) matches.push(m);
+  if (matches.length === 0) return html;
+
+  const replacements = await Promise.all(
+    matches.map(async (match) => {
+      const src = match[2] ?? '';
+      // Leave anything that already looks absolute alone.
+      if (/^([a-z]+:)?\/\//i.test(src) || src.startsWith('data:')) return null;
+      const resolved = resolveRelative(markdownDir, src).toLowerCase();
+      const asset = imageMap.get(resolved);
+      if (!asset) return null;
+      const assetId = newId();
+      try {
+        await db.insert(schema.item_assets).values({
+          id: assetId,
+          workspace_id: workspaceId,
+          item_id: itemId,
+          content_type: asset.contentType,
+          byte_size: asset.bytes.byteLength,
+          data: asset.bytes,
+        });
+      } catch (err) {
+        logger.warn(
+          { err: (err as Error).message, src, itemId },
+          'ingestAndRewriteImages: failed to store asset',
+        );
+        return null;
+      }
+      const newSrc = `/item-assets/${assetId}`;
+      return { full: match[0], newTag: match[0]!.replace(src, newSrc) };
+    }),
+  );
+
+  let out = html;
+  for (const r of replacements) {
+    if (!r) continue;
+    out = out.replace(r.full, r.newTag);
+  }
+  return out;
+}
+
+/**
+ * Resolve a relative path against a base directory expressed as path segments.
+ * Handles ../ and ./ segments. Returns the joined path WITHOUT a leading slash.
+ */
+function resolveRelative(baseDir: string[], rel: string): string {
+  const stack = [...baseDir];
+  for (const seg of rel.split('/')) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..') stack.pop();
+    else stack.push(seg);
+  }
+  return stack.join('/');
 }

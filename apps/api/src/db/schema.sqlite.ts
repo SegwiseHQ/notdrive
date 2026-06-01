@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { blob, check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -153,6 +153,25 @@ export const views = sqliteTable('views', {
   layout: text('layout').notNull().default('list'),
   created_at: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
 });
+
+// Binary blobs (typically images) attached to an item. Mirror of postgres
+// item_assets. See schema.postgres.ts for the design rationale.
+export const item_assets = sqliteTable(
+  'item_assets',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    content_type: text('content_type').notNull(),
+    byte_size: integer('byte_size').notNull(),
+    data: blob('data', { mode: 'buffer' }).notNull(),
+    created_at: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    idxWs: index('item_assets_ws').on(t.workspace_id),
+    idxItem: index('item_assets_item').on(t.item_id),
+  }),
+);
 
 export const item_events = sqliteTable(
   'item_events',
