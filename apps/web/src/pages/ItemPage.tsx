@@ -46,6 +46,16 @@ export function ItemPage() {
     else next.delete('comments');
     setParams(next, { replace: true });
   };
+  // Selection captured from the bubble toolbar's Comment button. While set,
+  // the comments drawer renders a "pending inline" composer. On submit we
+  // create the thread server-side, then apply the comment mark to the
+  // captured range via the editor's imperative API.
+  const [pendingInline, setPendingInline] = useState<
+    { from: number; to: number; text: string } | null
+  >(null);
+  // Thread to scroll to in the drawer when the user clicks an inline
+  // highlight in the editor.
+  const [focusThreadId, setFocusThreadId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -452,6 +462,14 @@ export function ItemPage() {
                 patch.mutate({ body });
               }, 600);
             }}
+            onCommentMarkClick={(threadId) => {
+              setFocusThreadId(threadId);
+              setCommentsOpen(true);
+            }}
+            onCommentSelection={(sel) => {
+              setPendingInline(sel);
+              setCommentsOpen(true);
+            }}
           />
         </div>
       )}
@@ -546,13 +564,39 @@ export function ItemPage() {
       <CommentsPanel
         itemId={item.id}
         open={commentsOpen}
-        onOpenChange={setCommentsOpen}
+        onOpenChange={(o) => {
+          setCommentsOpen(o);
+          // Closing the drawer drops the pending inline thread — the
+          // user can re-open by selecting text again.
+          if (!o) setPendingInline(null);
+        }}
         members={mentionItems}
         currentUserId={currentUserId}
         isAdmin={(() => {
           const ws = meQuery.data?.workspaces.find((w) => w.id === wsId);
           return ws?.role === 'admin' || ws?.role === 'owner';
         })()}
+        pendingInline={pendingInline}
+        onPendingSubmit={async (body) => {
+          if (!pendingInline) return;
+          // Create the inline thread + first comment in one round-trip,
+          // then immediately wrap the captured range with the comment mark
+          // so the highlight appears the moment the drawer settles.
+          const created = await http.createComment(item.id, {
+            body,
+            anchor: pendingInline.text.slice(0, 280),
+          });
+          editorRef.current?.applyCommentMark(
+            pendingInline.from,
+            pendingInline.to,
+            created.thread_id,
+          );
+          setPendingInline(null);
+          qc.invalidateQueries({ queryKey: ['comments', item.id] });
+        }}
+        onPendingCancel={() => setPendingInline(null)}
+        focusThreadId={focusThreadId}
+        onFocusConsumed={() => setFocusThreadId(null)}
       />
       {driveId ? (
         <ShareDialog

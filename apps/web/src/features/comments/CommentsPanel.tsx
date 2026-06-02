@@ -1,11 +1,12 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CommentDTO } from '@notdrive/shared';
+import type { CommentDTO, CommentThreadDTO } from '@notdrive/shared';
 import { Pencil, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { MentionItem } from '../editor/MentionMenu.js';
 import { http } from '../../lib/http.js';
+import { cn } from '../../lib/utils.js';
 import { CommentComposer } from './CommentComposer.js';
 import { tokenizeCommentBody } from './mentions.js';
 
@@ -17,9 +18,42 @@ interface Props {
   currentUserId: string | undefined;
   /** 'admin'/'owner' can delete any comment; everyone else only their own. */
   isAdmin: boolean;
+  /**
+   * Selection captured from the bubble toolbar's "Comment" button. When set,
+   * the drawer renders a pending inline thread at the bottom of the list
+   * with the anchor preview + an open composer. Cleared on submit/cancel.
+   */
+  pendingInline: { from: number; to: number; text: string } | null;
+  /**
+   * Called when the pending inline thread is submitted. Caller is expected
+   * to create the thread server-side, then apply the comment mark to the
+   * editor with the returned thread id.
+   */
+  onPendingSubmit: (body: string) => Promise<void>;
+  /** Cancel without creating a thread. */
+  onPendingCancel: () => void;
+  /**
+   * Thread id to scroll into view when the drawer opens — set when the user
+   * clicks an inline highlight in the editor. The panel scrolls + briefly
+   * pulses the thread, then calls onFocusConsumed.
+   */
+  focusThreadId: string | null;
+  onFocusConsumed: () => void;
 }
 
-export function CommentsPanel({ itemId, open, onOpenChange, members, currentUserId, isAdmin }: Props) {
+export function CommentsPanel({
+  itemId,
+  open,
+  onOpenChange,
+  members,
+  currentUserId,
+  isAdmin,
+  pendingInline,
+  onPendingSubmit,
+  onPendingCancel,
+  focusThreadId,
+  onFocusConsumed,
+}: Props) {
   const qc = useQueryClient();
   const key = ['comments', itemId] as const;
 
@@ -29,24 +63,51 @@ export function CommentsPanel({ itemId, open, onOpenChange, members, currentUser
     enabled: open,
   });
 
-  const create = useMutation({
-    mutationFn: (body: string) => http.createComment(itemId, { body }),
+  const threads = query.data?.threads ?? [];
+  const pageThread = threads.find((t) => t.anchor === null) ?? null;
+  const inlineThreads = threads.filter((t) => t.anchor !== null);
+
+  // Page-level composer (the existing UX from Phase A).
+  const createPage = useMutation({
+    mutationFn: (body: string) =>
+      http.createComment(itemId, pageThread ? { body, thread_id: pageThread.id } : { body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
     onError: (e) => toast.error((e as Error).message),
   });
 
-  const comments = query.data?.thread?.comments ?? [];
+  // Reply to a specific inline thread.
+  const replyToInline = useMutation({
+    mutationFn: ({ threadId, body }: { threadId: string; body: string }) =>
+      http.createComment(itemId, { body, thread_id: threadId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  // Scroll-to-focus when a mark click opens the drawer pointing at a thread.
+  const threadRefs = useRef(new Map<string, HTMLLIElement>());
+  const [pulseId, setPulseId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open || !focusThreadId) return;
+    // Wait for next frame so the threads list has rendered after the data
+    // fetch settles — otherwise the ref isn't registered yet.
+    const t = setTimeout(() => {
+      const el = threadRefs.current.get(focusThreadId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setPulseId(focusThreadId);
+        setTimeout(() => setPulseId(null), 1600);
+      }
+      onFocusConsumed();
+    }, 50);
+    return () => clearTimeout(t);
+  }, [open, focusThreadId, threads.length, onFocusConsumed]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        {/* Lighter overlay so the page underneath stays visible — this is a
-            side drawer, not a modal that demands focus. */}
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/20 data-[state=open]:animate-in data-[state=open]:fade-in" />
         <Dialog.Content
           className="fixed right-0 top-0 z-50 flex h-full w-[420px] max-w-[95vw] flex-col border-l border-border bg-background shadow-2xl data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right"
-          // Don't auto-focus inside the panel on open; the user is reading
-          // the page, not the panel. They'll click in when they want to type.
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <header className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -61,41 +122,214 @@ export function CommentsPanel({ itemId, open, onOpenChange, members, currentUser
             </Dialog.Close>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className="flex-1 overflow-y-auto">
             {query.isLoading && (
-              <p className="text-xs text-muted-foreground">Loading…</p>
+              <p className="px-4 py-3 text-xs text-muted-foreground">Loading…</p>
             )}
-            {!query.isLoading && comments.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                No comments yet. Start the discussion.
-              </p>
-            )}
-            <ul className="flex flex-col gap-4">
-              {comments.map((c) => (
-                <CommentRow
-                  key={c.id}
-                  comment={c}
-                  itemId={itemId}
+
+            {/* Page-level thread first. Inline-with-existing-comments empty
+                state still renders the composer so users can start the
+                discussion. */}
+            <ThreadBlock
+              thread={pageThread}
+              fallbackTitle="On this page"
+              members={members}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+              itemId={itemId}
+              pulse={pulseId === pageThread?.id}
+              registerRef={(el) => {
+                if (pageThread && el) threadRefs.current.set(pageThread.id, el);
+              }}
+              persistentComposer
+              composerBusy={createPage.isPending}
+              onSubmitComposer={(body) => createPage.mutateAsync(body).then(() => {})}
+            />
+
+            {/* Inline threads. */}
+            <ul className="flex flex-col">
+              {inlineThreads.map((t) => (
+                <ThreadBlock
+                  key={t.id}
+                  thread={t}
                   members={members}
-                  canEdit={c.author?.id === currentUserId}
-                  canDelete={c.author?.id === currentUserId || isAdmin}
+                  currentUserId={currentUserId}
+                  isAdmin={isAdmin}
+                  itemId={itemId}
+                  pulse={pulseId === t.id}
+                  registerRef={(el) => {
+                    if (el) threadRefs.current.set(t.id, el);
+                  }}
+                  persistentComposer={false}
+                  composerBusy={replyToInline.isPending}
+                  onSubmitComposer={(body) =>
+                    replyToInline.mutateAsync({ threadId: t.id, body }).then(() => {})
+                  }
                 />
               ))}
             </ul>
-          </div>
 
-          <div className="border-t border-border px-4 py-3">
-            <CommentComposer
-              members={members}
-              busy={create.isPending}
-              onSubmit={async (body) => {
-                await create.mutateAsync(body);
-              }}
-            />
+            {/* Pending inline thread (after the user clicked Comment on a
+                selection but hasn't sent yet). Rendered last so it's
+                naturally at the bottom near where their attention is. */}
+            {pendingInline && (
+              <PendingInlineBlock
+                anchor={pendingInline.text}
+                members={members}
+                onSubmit={onPendingSubmit}
+                onCancel={onPendingCancel}
+              />
+            )}
+
+            {!query.isLoading && !pageThread && inlineThreads.length === 0 && !pendingInline && (
+              <p className="px-4 py-3 text-xs text-muted-foreground">
+                No comments yet. Start the discussion below, or select text in the page to comment on it.
+              </p>
+            )}
           </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function ThreadBlock({
+  thread,
+  fallbackTitle,
+  members,
+  currentUserId,
+  isAdmin,
+  itemId,
+  pulse,
+  registerRef,
+  persistentComposer,
+  composerBusy,
+  onSubmitComposer,
+}: {
+  thread: CommentThreadDTO | null;
+  fallbackTitle?: string;
+  members: MentionItem[];
+  currentUserId: string | undefined;
+  isAdmin: boolean;
+  itemId: string;
+  pulse: boolean;
+  registerRef: (el: HTMLLIElement | null) => void;
+  persistentComposer: boolean;
+  composerBusy: boolean;
+  onSubmitComposer: (body: string) => Promise<void>;
+}) {
+  const [replying, setReplying] = useState(false);
+  const comments = thread?.comments ?? [];
+
+  // Don't render the page-level block at all when it's empty and we don't
+  // have a persistent composer to attach — keeps the drawer clean when only
+  // inline threads exist.
+  if (!thread && !persistentComposer) return null;
+
+  return (
+    <li
+      ref={registerRef}
+      className={cn(
+        'border-b border-border/60 transition',
+        pulse && 'ring-2 ring-yellow-400/60',
+      )}
+    >
+      <div className="px-4 py-3">
+        {thread?.anchor && (
+          <blockquote className="mb-2 border-l-2 border-yellow-400/50 bg-yellow-200/10 px-2 py-1 text-xs italic text-muted-foreground">
+            {truncate(thread.anchor, 200)}
+          </blockquote>
+        )}
+        {!thread?.anchor && fallbackTitle && comments.length > 0 && (
+          <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+            {fallbackTitle}
+          </p>
+        )}
+
+        {comments.length > 0 && (
+          <ul className="flex flex-col gap-3">
+            {comments.map((c) => (
+              <CommentRow
+                key={c.id}
+                comment={c}
+                itemId={itemId}
+                members={members}
+                canEdit={c.author?.id === currentUserId}
+                canDelete={c.author?.id === currentUserId || isAdmin}
+              />
+            ))}
+          </ul>
+        )}
+
+        {persistentComposer ? (
+          <div className="mt-3">
+            <CommentComposer
+              members={members}
+              busy={composerBusy}
+              onSubmit={onSubmitComposer}
+            />
+          </div>
+        ) : replying ? (
+          <div className="mt-2">
+            <CommentComposer
+              members={members}
+              busy={composerBusy}
+              submitLabel="Reply"
+              onSubmit={async (body) => {
+                await onSubmitComposer(body);
+                setReplying(false);
+              }}
+              onCancel={() => setReplying(false)}
+            />
+          </div>
+        ) : (
+          <button
+            onClick={() => setReplying(true)}
+            className="mt-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+          >
+            Reply
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function PendingInlineBlock({
+  anchor,
+  members,
+  onSubmit,
+  onCancel,
+}: {
+  anchor: string;
+  members: MentionItem[];
+  onSubmit: (body: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="border-b border-border/60 bg-yellow-500/5 px-4 py-3">
+      <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+        New comment on selection
+      </p>
+      <blockquote className="mb-2 border-l-2 border-yellow-400/60 bg-yellow-200/15 px-2 py-1 text-xs italic text-muted-foreground">
+        {truncate(anchor, 200)}
+      </blockquote>
+      <CommentComposer
+        members={members}
+        busy={busy}
+        submitLabel="Comment"
+        onCancel={onCancel}
+        onSubmit={async (body) => {
+          setBusy(true);
+          try {
+            await onSubmit(body);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </div>
   );
 }
 
@@ -206,6 +440,11 @@ function CommentRow({
       </div>
     </li>
   );
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return `${s.slice(0, max - 1)}…`;
 }
 
 function formatRelative(epochMs: number): string {

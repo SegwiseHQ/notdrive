@@ -20,8 +20,8 @@ app.use('*', requireAuth, requireWorkspace('viewer'));
 app.get('/:id/comments', async (c) => {
   const m = c.get('membership');
   const user = c.get('user');
-  const thread = await listForItem(m.workspace_id, user.id, c.req.param('id'));
-  return c.json({ thread });
+  const threads = await listForItem(m.workspace_id, user.id, c.req.param('id'));
+  return c.json({ threads });
 });
 
 app.post(
@@ -31,8 +31,12 @@ app.post(
   async (c) => {
     const m = c.get('membership');
     const user = c.get('user');
-    const { body } = c.req.valid('json');
-    const result = await createComment(m.workspace_id, user.id, c.req.param('id'), body);
+    const result = await createComment(
+      m.workspace_id,
+      user.id,
+      c.req.param('id'),
+      c.req.valid('json'),
+    );
     return c.json(result, 201);
   },
 );

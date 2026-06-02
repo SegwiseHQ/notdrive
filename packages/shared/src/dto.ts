@@ -119,6 +119,10 @@ export interface CommentThreadDTO {
   comments: CommentDTO[];
 }
 
+export interface CommentThreadListDTO {
+  threads: CommentThreadDTO[];
+}
+
 export const NOTIFICATION_KINDS = ['comment.mention', 'comment.reply'] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

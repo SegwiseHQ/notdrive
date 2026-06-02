@@ -176,6 +176,13 @@ export const mePatchSchema = z.object({
 
 export const commentCreateSchema = z.object({
   body: z.string().min(1).max(8000),
+  // Inline-thread creation: a short quoted snippet of the selected text
+  // when the user clicks "Comment" in the bubble toolbar. Stored verbatim
+  // on comment_threads.anchor. Omit for page-level threads.
+  anchor: z.string().min(1).max(280).optional(),
+  // Reply to an existing thread (page-level or inline). When set, `anchor`
+  // is ignored — the comment is appended to that thread.
+  thread_id: idSchema.optional(),
 });
 
 export const commentPatchSchema = z.object({

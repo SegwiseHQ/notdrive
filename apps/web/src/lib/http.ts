@@ -263,9 +263,12 @@ export const http = {
   },
 
   listComments: (itemId: string) =>
-    req<{ thread: CommentThreadDTO | null }>(`/items/${encodeURIComponent(itemId)}/comments`),
-  createComment: (itemId: string, body: { body: string }) =>
-    req<{ thread_id: string; comment_id: string }>(
+    req<{ threads: CommentThreadDTO[] }>(`/items/${encodeURIComponent(itemId)}/comments`),
+  createComment: (
+    itemId: string,
+    body: { body: string; anchor?: string; thread_id?: string },
+  ) =>
+    req<{ thread_id: string; comment_id: string; anchor: string | null }>(
       `/items/${encodeURIComponent(itemId)}/comments`,
       { method: 'POST', body: JSON.stringify(body) },
     ),

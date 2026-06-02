@@ -1,8 +1,14 @@
 import { BubbleMenu, type Editor } from '@tiptap/react';
-import { Bold, Code, Italic, Strikethrough } from 'lucide-react';
+import { Bold, Code, Italic, MessageSquarePlus, Strikethrough } from 'lucide-react';
 
 interface Props {
   editor: Editor | null;
+  /**
+   * Fired when the user clicks "Comment" with a non-empty selection.
+   * Carries the absolute character range + the plain text inside it so the
+   * parent can open the comments drawer with a pre-filled anchor preview.
+   */
+  onComment?: (selection: { from: number; to: number; text: string }) => void;
 }
 
 /**
@@ -13,8 +19,19 @@ interface Props {
  * exposes them in a visible UI so the formatting commands are discoverable
  * without memorising the shortcuts.
  */
-export function BubbleToolbar({ editor }: Props) {
+export function BubbleToolbar({ editor, onComment }: Props) {
   if (!editor) return null;
+
+  const triggerComment = () => {
+    const { from, to } = editor.state.selection;
+    if (from === to) return;
+    // .textBetween joins block boundaries with a separator — use a single
+    // space so paragraph breaks inside the selection become readable
+    // anchor previews instead of slamming words together.
+    const text = editor.state.doc.textBetween(from, to, ' ');
+    if (!text.trim()) return;
+    onComment?.({ from, to, text });
+  };
 
   return (
     <BubbleMenu
@@ -58,6 +75,14 @@ export function BubbleToolbar({ editor }: Props) {
       >
         <Code className="size-3.5" />
       </ToolbarButton>
+      {onComment && (
+        <>
+          <span className="mx-0.5 h-4 w-px bg-border" aria-hidden />
+          <ToolbarButton active={false} onClick={triggerComment} title="Comment">
+            <MessageSquarePlus className="size-3.5" />
+          </ToolbarButton>
+        </>
+      )}
     </BubbleMenu>
   );
 }

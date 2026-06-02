@@ -8,6 +8,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { common, createLowlight } from 'lowlight';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { BubbleToolbar } from './BubbleToolbar.js';
+import { CommentMark } from './CommentMark.js';
 import { SlashCommand } from './slashCommand.js';
 import { buildMentionExtension } from './mentionExtension.js';
 import type { MentionItem } from './MentionMenu.js';
@@ -30,6 +31,19 @@ interface EditorProps {
    * so re-renders with a populated list update automatically.
    */
   members?: MentionItem[];
+  /**
+   * Fired when the user clicks an inline comment highlight. Receives the
+   * thread id from the mark's `data-thread-id` attribute so the comments
+   * drawer can scroll to that thread.
+   */
+  onCommentMarkClick?: (threadId: string) => void;
+  /**
+   * Fired when the user clicks the "Comment" button in the bubble toolbar
+   * with a non-empty selection. Carries the absolute character range +
+   * the selected text so the parent can pre-fill the inline-thread
+   * composer and later apply the mark via `applyCommentMark`.
+   */
+  onCommentSelection?: (selection: { from: number; to: number; text: string }) => void;
 }
 
 /**
@@ -43,6 +57,14 @@ interface EditorProps {
 export interface PageEditorHandle {
   /** Replace the editor's HTML body in place. Used to accept remote updates. */
   setBody: (html: string) => void;
+  /**
+   * Wrap a character range in a comment mark. Called after the server
+   * creates a new inline thread so the highlight appears immediately.
+   * Triggers an onChange so the parent saves the body without waiting
+   * for the 600 ms typing debounce — the mark must persist before the
+   * user navigates away.
+   */
+  applyCommentMark: (from: number, to: number, threadId: string) => void;
 }
 
 /**
@@ -61,11 +83,21 @@ export interface PageEditorHandle {
  * helpers don't race with React's unmount.
  */
 export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(
-  function PageEditor({ initialBody, onChange, itemId, members = [] }, ref) {
+  function PageEditor(
+    { initialBody, onChange, itemId, members = [], onCommentMarkClick, onCommentSelection },
+    ref,
+  ) {
     // Mutable ref so the mention extension always sees the latest member list
     // without rebuilding the editor when members load asynchronously.
     const membersRef = useRef(members);
     membersRef.current = members;
+    // Refs for the click + selection callbacks so the useEditor config can
+    // see the latest version without rebuilding the editor (which would
+    // trigger the tippy/removeChild race we worked around in PR #20).
+    const onCommentMarkClickRef = useRef(onCommentMarkClick);
+    onCommentMarkClickRef.current = onCommentMarkClick;
+    const onCommentSelectionRef = useRef(onCommentSelection);
+    onCommentSelectionRef.current = onCommentSelection;
 
     const editor = useEditor({
       extensions: [
@@ -107,12 +139,25 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(
         }),
         SlashCommand.configure({ itemId }),
         buildMentionExtension(() => membersRef.current),
+        CommentMark,
       ],
       content: initialBody ?? '',
       editorProps: {
         attributes: {
           class:
             'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[40vh] [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child]:before:text-muted-foreground [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:h-0 [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:p-0 [&_ul[data-type=taskList]_li]:flex [&_ul[data-type=taskList]_li]:items-start [&_ul[data-type=taskList]_li]:gap-2 [&_ul[data-type=taskList]_li>label]:mt-1.5',
+        },
+        // ProseMirror passes the DOM event through. We walk up from the
+        // clicked target to find the nearest comment-mark span, then fire
+        // the parent callback with the thread id. Returning `false` keeps
+        // the editor's default click handling (caret placement, etc.).
+        handleClickOn(_view, _pos, _node, _nodePos, event) {
+          const el = (event.target as HTMLElement | null)?.closest?.('[data-thread-id]') as
+            | HTMLElement
+            | null;
+          const id = el?.getAttribute('data-thread-id');
+          if (id) onCommentMarkClickRef.current?.(id);
+          return false;
         },
       },
       onUpdate: ({ editor }) => {
@@ -128,13 +173,32 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(
           // immediately fire a save with the just-loaded server content.
           editor?.commands.setContent(html, false);
         },
+        applyCommentMark: (from: number, to: number, threadId: string) => {
+          if (!editor) return;
+          editor
+            .chain()
+            // Don't steal focus — the user is in the comments drawer, not
+            // the editor, when this fires. Stealing focus would yank the
+            // composer textarea out from under them.
+            .setTextSelection({ from, to })
+            .setMark('comment', { threadId })
+            // Move caret to the END of the range so we don't leave a giant
+            // selection visually highlighted after the mark is applied.
+            .setTextSelection(to)
+            .run();
+          // setMark mutates the doc but ProseMirror's transaction listener
+          // already invokes onUpdate — no extra onChange call needed.
+        },
       }),
       [editor],
     );
 
     return (
       <>
-        <BubbleToolbar editor={editor} />
+        <BubbleToolbar
+          editor={editor}
+          onComment={(sel) => onCommentSelectionRef.current?.(sel)}
+        />
         <EditorContent editor={editor} />
       </>
     );
