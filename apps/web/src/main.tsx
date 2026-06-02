@@ -8,6 +8,10 @@ import { queryClient } from './lib/queryClient.js';
 import { router } from './router.js';
 import './index.css';
 import 'tippy.js/dist/tippy.css';
+// Syntax-highlighting theme for code blocks. github-dark works well across
+// both light + dark UI modes since the editor's code block has its own
+// muted background; the highlight colors stay visible on either.
+import 'highlight.js/styles/github-dark.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -1,14 +1,22 @@
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { common, createLowlight } from 'lowlight';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { BubbleToolbar } from './BubbleToolbar.js';
 import { SlashCommand } from './slashCommand.js';
 import { buildMentionExtension } from './mentionExtension.js';
 import type { MentionItem } from './MentionMenu.js';
+
+// Built outside the component so the language registry is created once. The
+// `common` set bundles ~35 popular languages (JS/TS, Python, Go, Rust, Java,
+// C/C++, JSON, HTML, CSS, Bash, SQL, YAML, Markdown, Ruby, PHP, etc.) — good
+// trade-off between bundle size and coverage.
+const lowlight = createLowlight(common);
 
 interface EditorProps {
   initialBody: string | null;
@@ -63,6 +71,24 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(
       extensions: [
         StarterKit.configure({
           heading: { levels: [1, 2, 3] },
+          // Disable the built-in code-block; CodeBlockLowlight replaces it
+          // with the same schema name but adds syntax highlighting.
+          codeBlock: false,
+        }),
+        CodeBlockLowlight.configure({
+          lowlight,
+          // null = auto-detect language from the content. Users can also
+          // type ```js (etc.) markdown shortcuts to set the language at
+          // creation time; StarterKit's input rule still fires.
+          defaultLanguage: null,
+          HTMLAttributes: {
+            // `not-prose` opts the <pre> subtree out of @tailwindcss/typography
+            // styles — otherwise prose overrides highlight.js's token colors.
+            // `spellcheck=false` stops the browser from underlining code
+            // identifiers as misspelled words.
+            class: 'not-prose rounded-md border border-border bg-muted/30 p-3 font-mono text-[12.5px]',
+            spellcheck: 'false',
+          },
         }),
         // Allow inline images. The /image slash command uploads via the API
         // and inserts an <img src="/item-assets/:id"> node here.
