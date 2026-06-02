@@ -81,7 +81,14 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(
           // type ```js (etc.) markdown shortcuts to set the language at
           // creation time; StarterKit's input rule still fires.
           defaultLanguage: null,
-          HTMLAttributes: { class: 'rounded-md border border-border bg-muted/30 p-3 text-[12.5px]' },
+          HTMLAttributes: {
+            // `not-prose` opts the <pre> subtree out of @tailwindcss/typography
+            // styles — otherwise prose overrides highlight.js's token colors.
+            // `spellcheck=false` stops the browser from underlining code
+            // identifiers as misspelled words.
+            class: 'not-prose rounded-md border border-border bg-muted/30 p-3 font-mono text-[12.5px]',
+            spellcheck: 'false',
+          },
         }),
         // Allow inline images. The /image slash command uploads via the API
         // and inserts an <img src="/item-assets/:id"> node here.
