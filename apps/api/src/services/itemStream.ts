@@ -17,7 +17,12 @@ export type ItemEventKind =
   | 'unlinked'
   | 'comment.added'
   | 'comment.edited'
-  | 'comment.deleted';
+  | 'comment.deleted'
+  // Emitted when the LAST live comment in a thread is removed and the
+  // thread itself is hard-deleted. Frontends listening for this strip
+  // the corresponding `comment` mark from the editor body so an empty
+  // anchor doesn't keep glowing.
+  | 'comment.thread_deleted';
 
 export interface ItemEvent {
   kind: ItemEventKind;

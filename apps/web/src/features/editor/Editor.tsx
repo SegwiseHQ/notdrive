@@ -65,6 +65,12 @@ export interface PageEditorHandle {
    * user navigates away.
    */
   applyCommentMark: (from: number, to: number, threadId: string) => void;
+  /**
+   * Remove every `comment` mark whose threadId matches. Called when the
+   * server hard-deletes a thread (its last comment was deleted) so the
+   * editor doesn't keep showing an orphan highlight pointing at nothing.
+   */
+  stripCommentMark: (threadId: string) => void;
 }
 
 /**
@@ -188,6 +194,27 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(
             .run();
           // setMark mutates the doc but ProseMirror's transaction listener
           // already invokes onUpdate — no extra onChange call needed.
+        },
+        stripCommentMark: (threadId: string) => {
+          if (!editor) return;
+          const markType = editor.schema.marks.comment;
+          if (!markType) return;
+          const tr = editor.state.tr;
+          let changed = false;
+          // Walk every text node, drop the comment mark when its threadId
+          // matches. Cheap on typical pages; the alternative (a selection-
+          // based removeMark) would only work if we had the original
+          // from/to and would still need to scan to find them.
+          editor.state.doc.descendants((node, pos) => {
+            if (!node.isText) return;
+            for (const mark of node.marks) {
+              if (mark.type === markType && mark.attrs.threadId === threadId) {
+                tr.removeMark(pos, pos + node.nodeSize, mark);
+                changed = true;
+              }
+            }
+          });
+          if (changed) editor.view.dispatch(tr);
         },
       }),
       [editor],

@@ -105,19 +105,30 @@ export function ItemPage() {
           by: string;
           at: number;
         };
-        // Suppress self-events — saves from this tab don't need a banner.
+        // Comment events handled BEFORE the self-event guard. They mutate
+        // local state (strip an editor mark, invalidate cache queries)
+        // that the actor's own tab also needs — the mutation handler
+        // already invalidates `comments`, but stripping the mark on
+        // thread-delete must happen here so the highlight goes away in
+        // the tab that did the delete too. All operations are idempotent
+        // so re-processing is safe.
+        if (data.kind.startsWith('comment.')) {
+          qc.invalidateQueries({ queryKey: ['comments', itemId] });
+          if (data.kind === 'comment.thread_deleted') {
+            const threadId = (data as unknown as { payload?: { thread_id?: string } }).payload
+              ?.thread_id;
+            if (threadId) editorRef.current?.stripCommentMark(threadId);
+            qc.invalidateQueries({ queryKey: ['notifications', wsId] });
+          }
+          return;
+        }
+        // Suppress non-comment self-events — saves from this tab don't
+        // need a banner.
         if (data.by === currentUserId) return;
         if (data.kind === 'archived') {
           // Archive isn't debounced — bounce immediately.
           toast.info('This page was archived');
           goToParent(itemQuery.data?.parent_id);
-          return;
-        }
-        // Comment events live-update the drawer without a refresh banner —
-        // comments are append-only conversations, never silently destructive
-        // of in-progress typing.
-        if (data.kind.startsWith('comment.')) {
-          qc.invalidateQueries({ queryKey: ['comments', itemId] });
           return;
         }
         // Reset the timer on every event; banner appears only after

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { CommentDTO, CommentThreadDTO, Role } from '@notdrive/shared';
 import { roleAtLeast } from '@notdrive/shared';
 import { db, schema } from '../db/index.js';
@@ -329,6 +329,27 @@ export async function deleteComment(
     at: now,
     payload: { thread_id: row.thread_id, comment_id: commentId },
   });
+
+  // If that was the last live comment in the thread, hard-delete the
+  // thread so the drawer doesn't keep showing an empty thread (with just
+  // a Reply button) and the editor's `comment` mark — kept in sync via
+  // the `comment.thread_deleted` event — gets stripped. FK ON DELETE
+  // CASCADE on notifications.thread_id also clears any lingering bell
+  // entries referencing this thread.
+  const liveCount = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(schema.comments)
+    .where(and(eq(schema.comments.thread_id, row.thread_id), isNull(schema.comments.deleted_at)));
+
+  if (Number(liveCount[0]?.n ?? 0) === 0) {
+    await db.delete(schema.comment_threads).where(eq(schema.comment_threads.id, row.thread_id));
+    publishItemEvent(row.item_id, {
+      kind: 'comment.thread_deleted',
+      by: userId,
+      at: now,
+      payload: { thread_id: row.thread_id },
+    });
+  }
 }
 
 /**
