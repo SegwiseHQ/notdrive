@@ -14,6 +14,7 @@ import { requireWorkspace } from '../middleware/workspace.js';
 import {
   archiveItem,
   createItem,
+  duplicateItem,
   getItem,
   linkDriveFile,
   listItems,
@@ -139,6 +140,15 @@ app.delete('/:id/link', requireWorkspace('member'), async (c) => {
   const user = c.get('user');
   await unlinkDriveFile(m.workspace_id, user.id, c.req.param('id'));
   return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
+});
+
+// Deep-clone an item + its descendants. Asset bytes are copied; body HTML is
+// rewritten so img tags point at the new asset rows. Returns the new root.
+app.post('/:id/duplicate', requireWorkspace('member'), async (c) => {
+  const m = c.get('membership');
+  const user = c.get('user');
+  const newId = await duplicateItem(m.workspace_id, user.id, c.req.param('id'));
+  return c.json(await getItem(m.workspace_id, user.id, newId), 201);
 });
 
 // Upload a binary asset (image, etc.) attached to this item. Used by the
