@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DrivePicker } from '../features/drive-picker/DrivePicker.js';
-import { PageEditor } from '../features/editor/Editor.js';
+import { PageEditor, type PageEditorHandle } from '../features/editor/Editor.js';
 import { PageShareDialog } from '../features/share/PageShareDialog.js';
 import { ShareDialog } from '../features/share/ShareDialog.js';
 import { TagEditor } from '../features/tags/TagEditor.js';
@@ -60,11 +60,10 @@ export function ItemPage() {
   // banner so the user can decide when to refresh (avoids stomping on
   // in-progress typing).
   const [remoteUpdate, setRemoteUpdate] = useState<{ kind: string; at: number } | null>(null);
-  // Bumped when the user accepts a remote update — used in the editor's
-  // `key` so it remounts with the freshly-fetched body. We can't react to
-  // body changes alone (would clobber typing on every save); the user opts
-  // in via the Refresh button.
-  const [remountToken, setRemountToken] = useState(0);
+  // Imperative handle into the editor so Refresh can replace body in place
+  // without remounting. Remounting raced with TipTap+tippy.js DOM cleanup
+  // and triggered a React reconciler "removeChild" crash on prod.
+  const editorRef = useRef<PageEditorHandle | null>(null);
   // Debounce timer for the banner. Editor saves are debounced at ~600 ms, so
   // a typing burst from the other user produces a stream of events. We wait
   // BANNER_QUIET_MS after the last event before surfacing the banner, so it
@@ -130,9 +129,7 @@ export function ItemPage() {
   const [title, setTitle] = useState('');
   useEffect(() => {
     if (itemQuery.data) setTitle(itemQuery.data.title);
-    // `remountToken` triggers a fresh title sync after a Refresh click so the
-    // input picks up the remote change without a full page reload.
-  }, [itemQuery.data?.id, remountToken]);
+  }, [itemQuery.data?.id]);
 
   const saveSeq = useRef(0);
   const patch = useMutation({
@@ -203,15 +200,20 @@ export function ItemPage() {
           </span>
           <button
             onClick={async () => {
-              // Refetch the item + children, THEN bump the remount token so
-              // the editor remounts with the freshly-fetched body. The await
-              // matters: without it, the remount happens before the new data
-              // lands and the editor seeds with the old initialBody again.
+              // Refetch, then imperatively replace title + body in place.
+              // Remounting the editor (the previous approach) raced with
+              // TipTap+tippy.js DOM cleanup and crashed React with a
+              // "removeChild" NotFoundError. setContent keeps the editor
+              // mounted and side-steps the race entirely.
               await Promise.all([
                 qc.invalidateQueries({ queryKey: ['item', itemId] }),
                 qc.invalidateQueries({ queryKey: ['items', wsId, itemId] }),
               ]);
-              setRemountToken((t) => t + 1);
+              const fresh = qc.getQueryData<typeof item>(['item', itemId]);
+              if (fresh) {
+                setTitle(fresh.title);
+                editorRef.current?.setBody(fresh.body ?? '');
+              }
               setRemoteUpdate(null);
             }}
             className="flex shrink-0 items-center gap-1 rounded border border-amber-500/40 bg-amber-500/20 px-2 py-1 font-medium hover:bg-amber-500/30"
@@ -410,10 +412,11 @@ export function ItemPage() {
       ) : (
         <div className="mt-8">
           <PageEditor
-            // Composite key forces a remount on Refresh-banner clicks so the
-            // editor picks up the new body. Plain navigation (different item)
-            // also remounts via the id change.
-            key={`${item.id}:${remountToken}`}
+            // Item id is the only key — navigation between pages remounts.
+            // Refresh-banner clicks use editorRef.setBody to update content
+            // without remounting (avoids tippy.js DOM cleanup race).
+            key={item.id}
+            ref={editorRef}
             itemId={item.id}
             initialBody={item.body}
             members={mentionItems}
