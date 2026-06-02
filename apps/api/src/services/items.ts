@@ -466,6 +466,154 @@ export async function purgeItem(workspaceId: string, userId: string, id: string)
   await db.delete(schema.items).where(eq(schema.items.id, id));
 }
 
+/**
+ * Deep-clone an item and its entire subtree. Asset bytes are copied (not
+ * shared) so the duplicate stays intact even if the original is later
+ * deleted. Body HTML is rewritten so any /item-assets/:oldId references
+ * point at the new asset ids.
+ *
+ * Visibility/owner: a duplicate mirrors the source's visibility. If source
+ * was private, the duplicate is private to the duplicating user (you own
+ * your copy of someone else's workspace-visible page; you keep ownership
+ * of duplicates of your own private pages).
+ *
+ * Root gets a "Copy of " prefix on its title. Descendants keep their
+ * original titles since the user is duplicating a labeled subtree.
+ *
+ * Returns the id of the new root.
+ */
+export async function duplicateItem(
+  workspaceId: string,
+  userId: string,
+  sourceId: string,
+): Promise<string> {
+  const source = await requireVisibleItem(workspaceId, userId, sourceId);
+
+  // Load source + every descendant.
+  const descendantIds = await collectDescendantIds(workspaceId, sourceId);
+  const allOldIds = [sourceId, ...descendantIds];
+  const oldItems = await db
+    .select()
+    .from(schema.items)
+    .where(and(eq(schema.items.workspace_id, workspaceId), inArray(schema.items.id, allOldIds)));
+
+  // Map old item ids -> new ids.
+  const idMap = new Map<string, string>();
+  for (const r of oldItems) idMap.set(r.id, newId());
+
+  // Load every item_asset for the subtree; copy bytes with fresh ids.
+  const oldAssets = oldItems.length
+    ? await db
+        .select()
+        .from(schema.item_assets)
+        .where(inArray(schema.item_assets.item_id, allOldIds))
+    : [];
+  const assetIdMap = new Map<string, string>();
+  for (const a of oldAssets) assetIdMap.set(a.id, newId());
+
+  // Tags carried over so the duplicate inherits classification.
+  const tagLinks = allOldIds.length
+    ? await db
+        .select()
+        .from(schema.item_tags)
+        .where(inArray(schema.item_tags.item_id, allOldIds))
+    : [];
+
+  // Root sibling-rank: append after the source's existing siblings so the
+  // duplicate appears near the original. (Sidebar tree currently sorts
+  // alphabetically anyway, but ranks need to be unique among siblings.)
+  const lastRank = await lastSiblingRank(workspaceId, source.parent_id);
+  const rootRank = between(lastRank, undefined) || INITIAL_RANK;
+
+  const ts = now();
+  const newRootId = idMap.get(sourceId)!;
+
+  await db.transaction(async (tx) => {
+    for (const old of oldItems) {
+      const isRoot = old.id === sourceId;
+      const newRowId = idMap.get(old.id)!;
+      // Descendant ranks are unique within their original sub-tree; reusing
+      // them under the new parent is safe since they only collide with
+      // their fellow new descendants (same sub-tree mapping).
+      const newParentId = isRoot
+        ? old.parent_id
+        : old.parent_id
+          ? (idMap.get(old.parent_id) ?? null)
+          : null;
+      await tx.insert(schema.items).values({
+        id: newRowId,
+        workspace_id: workspaceId,
+        type: old.type,
+        title: isRoot ? `Copy of ${old.title}` : old.title,
+        drive_file_id: old.drive_file_id,
+        parent_id: newParentId,
+        rank: isRoot ? rootRank : old.rank,
+        is_archived: false,
+        archived_at: null,
+        body: rewriteAssetIds(old.body, assetIdMap),
+        // appdata_file_id is owned by the original; the duplicate gets a
+        // fresh entry the next time the user edits and the mirror fires.
+        visibility: old.visibility,
+        owner_id: old.visibility === 'private' ? userId : null,
+        created_by: userId,
+        created_at: ts,
+        updated_at: ts,
+      });
+      await tx.insert(schema.item_events).values({
+        id: newId(),
+        workspace_id: workspaceId,
+        user_id: userId,
+        item_id: newRowId,
+        kind: 'created',
+        reason: 'duplicated',
+        created_at: ts,
+      });
+    }
+
+    for (const a of oldAssets) {
+      await tx.insert(schema.item_assets).values({
+        id: assetIdMap.get(a.id)!,
+        workspace_id: workspaceId,
+        item_id: idMap.get(a.item_id)!,
+        content_type: a.content_type,
+        byte_size: a.byte_size,
+        data: a.data,
+        created_at: ts,
+      });
+    }
+
+    for (const t of tagLinks) {
+      const newItemId = idMap.get(t.item_id);
+      if (newItemId) {
+        await tx.insert(schema.item_tags).values({
+          item_id: newItemId,
+          tag_id: t.tag_id,
+        });
+      }
+    }
+  });
+
+  logger.info(
+    { sourceId, newRootId, items: oldItems.length, assets: oldAssets.length },
+    'duplicated item subtree',
+  );
+  return newRootId;
+}
+
+/**
+ * Replace every `/item-assets/<oldId>` occurrence in `body` with the new id
+ * from `idMap`. Used by duplicateItem to keep <img> tags pointing at the
+ * copy's own asset rows rather than the original's.
+ */
+function rewriteAssetIds(body: string | null, idMap: Map<string, string>): string | null {
+  if (!body || idMap.size === 0) return body;
+  let out = body;
+  for (const [oldAssetId, newAssetId] of idMap) {
+    out = out.split(`/item-assets/${oldAssetId}`).join(`/item-assets/${newAssetId}`);
+  }
+  return out;
+}
+
 export async function restoreBodyFromAppData(workspaceId: string, userId: string, id: string) {
   const r = await requireItem(workspaceId, id);
   assertCanMutate(r, userId);

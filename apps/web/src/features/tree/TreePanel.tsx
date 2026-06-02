@@ -15,7 +15,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ChevronRight, File, FileText, Lock, MoreHorizontal, Plus, Star } from 'lucide-react';
+import { Archive, ChevronRight, Copy, File, FileText, Lock, MoreHorizontal, Plus, Star } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -174,6 +174,22 @@ function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
               >
                 <Star className={`size-3.5 ${item.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
                 {item.is_favorite ? 'Unstar' : 'Star'}
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={async () => {
+                  const toastId = toast.loading('Duplicating…');
+                  try {
+                    const copy = await http.duplicateItem(item.id);
+                    await qc.invalidateQueries({ queryKey: ['items', wsId] });
+                    toast.success('Duplicated', { id: toastId });
+                    navigate(`/w/${wsId}/i/${copy.id}`);
+                  } catch (e) {
+                    toast.error(`Duplicate failed: ${(e as Error).message}`, { id: toastId });
+                  }
+                }}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
+              >
+                <Copy className="size-3.5" /> Duplicate
               </DropdownMenu.Item>
               <DropdownMenu.Separator className="my-1 h-px bg-border" />
               <DropdownMenu.Item

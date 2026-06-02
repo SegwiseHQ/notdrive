@@ -112,6 +112,7 @@ export const http = {
   moveItem: (id: string, body: { parent_id: string | null; before_id?: string; after_id?: string }) =>
     req<ItemDTO>(`/items/${id}/move`, { method: 'PATCH', body: JSON.stringify(body) }),
   archiveItem: (id: string) => req<{ ok: true }>(`/items/${id}`, { method: 'DELETE' }),
+  duplicateItem: (id: string) => req<ItemDTO>(`/items/${id}/duplicate`, { method: 'POST' }),
   purgeItem: (id: string) => req<{ ok: true }>(`/items/${id}?hard=1`, { method: 'DELETE' }),
   restoreItem: (id: string) => req<ItemDTO>(`/items/${id}/restore`, { method: 'POST' }),
   openItem: (id: string) => req<{ ok: true }>(`/items/${id}/open`, { method: 'POST' }),
