@@ -444,7 +444,18 @@ export function ItemPage() {
             </button>
           </div>
           <ul className="flex flex-col">
-            {childrenQuery.data?.map((c) => (
+            {/* Sort the page-view child list alphabetically. The sidebar tree
+                still uses rank order so drag-drop reordering works there; this
+                list is read-only and a predictable A→Z order beats whichever
+                drag order the user might have set previously. */}
+            {[...(childrenQuery.data ?? [])]
+              .sort((a, b) =>
+                (a.title || 'Untitled').localeCompare(b.title || 'Untitled', undefined, {
+                  sensitivity: 'base',
+                  numeric: true,
+                }),
+              )
+              .map((c) => (
               <li key={c.id}>
                 <button
                   onClick={() => navigate(`/w/${wsId}/i/${c.id}`)}
