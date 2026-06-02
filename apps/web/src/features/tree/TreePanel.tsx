@@ -51,7 +51,7 @@ export function TreePanel({ wsId }: { wsId: string }) {
   };
 
   if (rootQuery.isLoading) return <div className="px-2 py-1 text-xs text-muted-foreground">Loading…</div>;
-  const items = rootQuery.data ?? [];
+  const items = sortByTitle(rootQuery.data ?? []);
   if (items.length === 0)
     return <div className="px-2 py-1 text-xs text-muted-foreground">No pages yet</div>;
 
@@ -63,6 +63,25 @@ export function TreePanel({ wsId }: { wsId: string }) {
         ))}
       </SortableContext>
     </DndContext>
+  );
+}
+
+/**
+ * Sort items by title alphabetically with natural numeric ordering, so
+ * `Sprint 2` precedes `Sprint 10`. Case-insensitive. The sidebar tree used
+ * to display in rank order (drag-drop output), but for typical use a
+ * predictable A→Z order beats whichever rank values happened to land
+ * during bulk imports.
+ *
+ * NOTE: This makes within-parent drag-reorder visually a no-op (the sort
+ * overrides the new rank). Drag-to-different-parent still works as before.
+ */
+function sortByTitle(items: ItemDTO[]): ItemDTO[] {
+  return [...items].sort((a, b) =>
+    (a.title || 'Untitled').localeCompare(b.title || 'Untitled', undefined, {
+      sensitivity: 'base',
+      numeric: true,
+    }),
   );
 }
 
@@ -177,13 +196,16 @@ function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
-      {expanded && childrenQuery.data && (
-        <SortableContext items={childrenQuery.data.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          {childrenQuery.data.map((c) => (
-            <TreeRow key={c.id} item={c} depth={depth + 1} />
-          ))}
-        </SortableContext>
-      )}
+      {expanded && childrenQuery.data && (() => {
+        const sortedChildren = sortByTitle(childrenQuery.data);
+        return (
+          <SortableContext items={sortedChildren.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            {sortedChildren.map((c) => (
+              <TreeRow key={c.id} item={c} depth={depth + 1} />
+            ))}
+          </SortableContext>
+        );
+      })()}
     </div>
   );
 }
