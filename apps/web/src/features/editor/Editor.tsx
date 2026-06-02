@@ -5,6 +5,7 @@ import TaskList from '@tiptap/extension-task-list';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useRef } from 'react';
+import { BubbleToolbar } from './BubbleToolbar.js';
 import { SlashCommand } from './slashCommand.js';
 import { buildMentionExtension } from './mentionExtension.js';
 import type { MentionItem } from './MentionMenu.js';
@@ -77,5 +78,10 @@ export function PageEditor({ initialBody, onChange, itemId, members = [] }: Edit
     },
   });
 
-  return <EditorContent editor={editor} />;
+  return (
+    <>
+      <BubbleToolbar editor={editor} />
+      <EditorContent editor={editor} />
+    </>
+  );
 }
