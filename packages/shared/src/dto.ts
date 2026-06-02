@@ -93,3 +93,49 @@ export interface RecentEntryDTO {
   at: number;
   item: ItemDTO;
 }
+
+export interface CommentAuthorDTO {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+export interface CommentDTO {
+  id: string;
+  thread_id: string;
+  body: string;
+  author: CommentAuthorDTO | null;
+  created_at: number;
+  edited_at: number | null;
+}
+
+export interface CommentThreadDTO {
+  id: string;
+  item_id: string;
+  anchor: string | null;
+  resolved_at: number | null;
+  created_at: number;
+  comments: CommentDTO[];
+}
+
+export const NOTIFICATION_KINDS = ['comment.mention', 'comment.reply'] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
+export interface NotificationDTO {
+  id: string;
+  kind: NotificationKind;
+  item_id: string | null;
+  item_title: string | null;
+  thread_id: string | null;
+  comment_id: string | null;
+  comment_excerpt: string | null;
+  actor: CommentAuthorDTO | null;
+  read_at: number | null;
+  created_at: number;
+}
+
+export interface NotificationListResponseDTO {
+  unread_count: number;
+  notifications: NotificationDTO[];
+}

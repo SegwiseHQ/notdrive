@@ -1,9 +1,11 @@
 import type {
   AutoShareMode,
+  CommentThreadDTO,
   DriveRoleLiteral,
   DriveTreeNode,
   ItemDTO,
   MeDTO,
+  NotificationListResponseDTO,
   RecentEntryDTO,
   TagDTO,
   ViewDTO,
@@ -259,6 +261,30 @@ export const http = {
     }
     return (await res.json()) as { id: string; url: string };
   },
+
+  listComments: (itemId: string) =>
+    req<{ thread: CommentThreadDTO | null }>(`/items/${encodeURIComponent(itemId)}/comments`),
+  createComment: (itemId: string, body: { body: string }) =>
+    req<{ thread_id: string; comment_id: string }>(
+      `/items/${encodeURIComponent(itemId)}/comments`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  editComment: (id: string, body: { body: string }) =>
+    req<{ ok: true }>(`/comments/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  deleteComment: (id: string) =>
+    req<{ ok: true }>(`/comments/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  listNotifications: () => req<NotificationListResponseDTO>('/notifications'),
+  markNotificationsRead: (ids: string[]) =>
+    req<{ ok: true }>('/notifications/mark-read', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+  markAllNotificationsRead: () =>
+    req<{ ok: true }>('/notifications/mark-all-read', { method: 'POST' }),
 
   logout: () => req<{ ok: true }>('/auth/logout', { method: 'POST' }),
 };

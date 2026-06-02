@@ -23,6 +23,7 @@ import {
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CreateDriveMenu } from '../features/drive-picker/CreateDriveMenu.js';
+import { NotificationBell } from '../features/notifications/NotificationBell.js';
 import { DriveTreePanel } from '../features/tree/DriveTreePanel.js';
 import { TreePanel } from '../features/tree/TreePanel.js';
 import { http } from '../lib/http.js';
@@ -57,6 +58,7 @@ export function Sidebar({ me }: { me: MeDTO }) {
         <div className="min-w-0 flex-1">
           <WorkspaceSwitcher me={me} />
         </div>
+        {wsId && <NotificationBell wsId={wsId} />}
         <OverflowMenu wsId={wsId} />
       </div>
 

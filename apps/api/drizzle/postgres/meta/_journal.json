@@ -36,6 +36,13 @@
       "when": 1780297566281,
       "tag": "0004_past_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780411426475,
+      "tag": "0005_bent_puff_adder",
+      "breakpoints": true
     }
   ]
 }

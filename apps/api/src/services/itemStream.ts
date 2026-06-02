@@ -14,7 +14,10 @@ export type ItemEventKind =
   | 'restored'
   | 'moved'
   | 'linked'
-  | 'unlinked';
+  | 'unlinked'
+  | 'comment.added'
+  | 'comment.edited'
+  | 'comment.deleted';
 
 export interface ItemEvent {
   kind: ItemEventKind;
@@ -22,6 +25,8 @@ export interface ItemEvent {
   by: string;
   /** Epoch ms — clients can use this to order / dedupe. */
   at: number;
+  /** Optional event-kind-specific payload (e.g. comment_id for comment.*). */
+  payload?: Record<string, unknown>;
 }
 
 type Subscriber = (event: ItemEvent) => void;

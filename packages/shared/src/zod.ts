@@ -174,6 +174,21 @@ export const mePatchSchema = z.object({
   dark_mode: darkModeSchema.optional(),
 });
 
+export const commentCreateSchema = z.object({
+  body: z.string().min(1).max(8000),
+});
+
+export const commentPatchSchema = z.object({
+  body: z.string().min(1).max(8000),
+});
+
+export const notificationsMarkReadSchema = z.object({
+  ids: z.array(idSchema).min(1).max(200),
+});
+
+export type CommentCreateInput = z.infer<typeof commentCreateSchema>;
+export type CommentPatchInput = z.infer<typeof commentPatchSchema>;
+
 export type ItemCreateInput = z.infer<typeof itemCreateSchema>;
 export type ItemPatchInput = z.infer<typeof itemPatchSchema>;
 export type ItemMoveInput = z.infer<typeof itemMoveSchema>;

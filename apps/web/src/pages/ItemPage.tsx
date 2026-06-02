@@ -6,6 +6,7 @@ import {
   Link as LinkIcon,
   Lock,
   LockOpen,
+  MessageSquare,
   MoreHorizontal,
   RefreshCw,
   Share2,
@@ -16,6 +17,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { CommentsPanel } from '../features/comments/CommentsPanel.js';
 import { DrivePicker } from '../features/drive-picker/DrivePicker.js';
 import { PageEditor, type PageEditorHandle } from '../features/editor/Editor.js';
 import { PageShareDialog } from '../features/share/PageShareDialog.js';
@@ -34,6 +36,16 @@ export function ItemPage() {
   const select = useSelection((s) => s.select);
   const goToParent = useNavigateToParent();
   const [shareOpen, setShareOpen] = useState(false);
+  // Open the comments drawer when ?comments=1 is in the URL — lets the
+  // notification dropdown deep-link straight into the panel without a
+  // post-navigate setState dance.
+  const commentsOpen = params.get('comments') === '1';
+  const setCommentsOpen = (o: boolean) => {
+    const next = new URLSearchParams(params);
+    if (o) next.set('comments', '1');
+    else next.delete('comments');
+    setParams(next, { replace: true });
+  };
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -91,6 +103,13 @@ export function ItemPage() {
           goToParent(itemQuery.data?.parent_id);
           return;
         }
+        // Comment events live-update the drawer without a refresh banner —
+        // comments are append-only conversations, never silently destructive
+        // of in-progress typing.
+        if (data.kind.startsWith('comment.')) {
+          qc.invalidateQueries({ queryKey: ['comments', itemId] });
+          return;
+        }
         // Reset the timer on every event; banner appears only after
         // BANNER_QUIET_MS of silence.
         if (bannerTimer.current) clearTimeout(bannerTimer.current);
@@ -110,7 +129,7 @@ export function ItemPage() {
       es.close();
       if (bannerTimer.current) clearTimeout(bannerTimer.current);
     };
-  }, [itemId, wsId, currentUserId, itemQuery.data?.parent_id, goToParent]);
+  }, [itemId, wsId, currentUserId, itemQuery.data?.parent_id, goToParent, qc]);
   // Members list powers the @ mention picker. Cached across page navigations
   // since membership rarely changes; refetched lazily by TanStack defaults.
   const membersQuery = useQuery({
@@ -256,6 +275,13 @@ export function ItemPage() {
           title={item.is_favorite ? 'Unstar' : 'Star'}
         >
           <Star className={`size-4 ${item.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+        </button>
+        <button
+          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+          onClick={() => setCommentsOpen(true)}
+          title="Comments"
+        >
+          <MessageSquare className="size-4" />
         </button>
         <button
           onClick={() => setShareOpen(true)}
@@ -517,6 +543,17 @@ export function ItemPage() {
           }}
         />
       )}
+      <CommentsPanel
+        itemId={item.id}
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        members={mentionItems}
+        currentUserId={currentUserId}
+        isAdmin={(() => {
+          const ws = meQuery.data?.workspaces.find((w) => w.id === wsId);
+          return ws?.role === 'admin' || ws?.role === 'owner';
+        })()}
+      />
       {driveId ? (
         <ShareDialog
           fileId={driveId}
