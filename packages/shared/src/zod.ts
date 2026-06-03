@@ -174,6 +174,28 @@ export const mePatchSchema = z.object({
   dark_mode: darkModeSchema.optional(),
 });
 
+export const commentCreateSchema = z.object({
+  body: z.string().min(1).max(8000),
+  // Inline-thread creation: a short quoted snippet of the selected text
+  // when the user clicks "Comment" in the bubble toolbar. Stored verbatim
+  // on comment_threads.anchor. Omit for page-level threads.
+  anchor: z.string().min(1).max(280).optional(),
+  // Reply to an existing thread (page-level or inline). When set, `anchor`
+  // is ignored — the comment is appended to that thread.
+  thread_id: idSchema.optional(),
+});
+
+export const commentPatchSchema = z.object({
+  body: z.string().min(1).max(8000),
+});
+
+export const notificationsMarkReadSchema = z.object({
+  ids: z.array(idSchema).min(1).max(200),
+});
+
+export type CommentCreateInput = z.infer<typeof commentCreateSchema>;
+export type CommentPatchInput = z.infer<typeof commentPatchSchema>;
+
 export type ItemCreateInput = z.infer<typeof itemCreateSchema>;
 export type ItemPatchInput = z.infer<typeof itemPatchSchema>;
 export type ItemMoveInput = z.infer<typeof itemMoveSchema>;

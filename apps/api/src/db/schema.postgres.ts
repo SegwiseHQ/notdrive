@@ -251,6 +251,71 @@ export const drive_sync_state = pgTable(
   (t) => ({ pk: primaryKey({ columns: [t.workspace_id, t.user_id] }) }),
 );
 
+// One thread per (item, anchor). `anchor` is NULL for page-level threads
+// (today) and reserved for inline-anchored comments (a TipTap mark) in the
+// future. The thread row itself is cheap; comments hang off it.
+export const comment_threads = pgTable(
+  'comment_threads',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    anchor: text('anchor'),
+    resolved_at: ts('resolved_at'),
+    resolved_by: text('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    created_by: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+    created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
+  },
+  (t) => ({
+    idxItem: index('ct_item').on(t.workspace_id, t.item_id, t.created_at),
+  }),
+);
+
+// Mentions are stored inline in `body` as `@[label](user_id)` tokens —
+// matches the wire format the @-mention picker produces in the composer. The
+// server parses these on create to fan out notifications.
+export const comments = pgTable(
+  'comments',
+  {
+    id: text('id').primaryKey(),
+    thread_id: text('thread_id').notNull().references(() => comment_threads.id, { onDelete: 'cascade' }),
+    user_id: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+    body: text('body').notNull(),
+    created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
+    edited_at: ts('edited_at'),
+    // Soft delete so reply chains stay coherent ("[deleted]" placeholders
+    // beat dangling thread_id references).
+    deleted_at: ts('deleted_at'),
+  },
+  (t) => ({
+    idxThread: index('comments_thread').on(t.thread_id, t.created_at),
+  }),
+);
+
+// Per-recipient row. Created when someone @-mentions you or replies to a
+// thread you participated in. UI marks rows as read on click.
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    item_id: text('item_id').references(() => items.id, { onDelete: 'cascade' }),
+    thread_id: text('thread_id').references(() => comment_threads.id, { onDelete: 'cascade' }),
+    comment_id: text('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
+    actor_id: text('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    read_at: ts('read_at'),
+    created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
+  },
+  (t) => ({
+    // Powers the bell badge unread count + the dropdown list (most-recent
+    // first per recipient).
+    idxRecipient: index('notif_recipient').on(t.workspace_id, t.user_id, t.read_at, t.created_at),
+    kindCheck: check('notif_kind_check', sql`${t.kind} IN ('comment.mention', 'comment.reply')`),
+  }),
+);
+
 export const job_leases = pgTable('job_leases', {
   name: text('name').primaryKey(),
   holder: text('holder').notNull(),

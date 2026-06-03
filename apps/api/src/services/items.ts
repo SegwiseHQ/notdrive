@@ -160,7 +160,7 @@ async function requireItem(workspaceId: string, id: string) {
  * Use this on read paths. Mutation paths (patch/move/archive/etc.) use the
  * looser requireItem followed by an explicit owner check via assertCanMutate.
  */
-async function requireVisibleItem(workspaceId: string, userId: string, id: string) {
+export async function requireVisibleItem(workspaceId: string, userId: string, id: string) {
   const row = await requireItem(workspaceId, id);
   if (row.visibility === 'private' && row.owner_id !== userId) {
     throw notFound('item not found');

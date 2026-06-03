@@ -219,6 +219,60 @@ export const drive_sync_state = sqliteTable(
   (t) => ({ pk: primaryKey({ columns: [t.workspace_id, t.user_id] }) }),
 );
 
+// Mirror of postgres comment_threads. See schema.postgres.ts for rationale.
+export const comment_threads = sqliteTable(
+  'comment_threads',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    anchor: text('anchor'),
+    resolved_at: integer('resolved_at'),
+    resolved_by: text('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    created_by: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+    created_at: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    idxItem: index('ct_item').on(t.workspace_id, t.item_id, t.created_at),
+  }),
+);
+
+export const comments = sqliteTable(
+  'comments',
+  {
+    id: text('id').primaryKey(),
+    thread_id: text('thread_id').notNull().references(() => comment_threads.id, { onDelete: 'cascade' }),
+    user_id: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+    body: text('body').notNull(),
+    created_at: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
+    edited_at: integer('edited_at'),
+    deleted_at: integer('deleted_at'),
+  },
+  (t) => ({
+    idxThread: index('comments_thread').on(t.thread_id, t.created_at),
+  }),
+);
+
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    item_id: text('item_id').references(() => items.id, { onDelete: 'cascade' }),
+    thread_id: text('thread_id').references(() => comment_threads.id, { onDelete: 'cascade' }),
+    comment_id: text('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
+    actor_id: text('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    read_at: integer('read_at'),
+    created_at: integer('created_at').notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    idxRecipient: index('notif_recipient').on(t.workspace_id, t.user_id, t.read_at, t.created_at),
+    kindCheck: check('notif_kind_check', sql`${t.kind} IN ('comment.mention', 'comment.reply')`),
+  }),
+);
+
 export const job_leases = sqliteTable('job_leases', {
   name: text('name').primaryKey(),
   holder: text('holder').notNull(),

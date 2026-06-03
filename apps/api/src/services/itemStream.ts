@@ -14,7 +14,15 @@ export type ItemEventKind =
   | 'restored'
   | 'moved'
   | 'linked'
-  | 'unlinked';
+  | 'unlinked'
+  | 'comment.added'
+  | 'comment.edited'
+  | 'comment.deleted'
+  // Emitted when the LAST live comment in a thread is removed and the
+  // thread itself is hard-deleted. Frontends listening for this strip
+  // the corresponding `comment` mark from the editor body so an empty
+  // anchor doesn't keep glowing.
+  | 'comment.thread_deleted';
 
 export interface ItemEvent {
   kind: ItemEventKind;
@@ -22,6 +30,8 @@ export interface ItemEvent {
   by: string;
   /** Epoch ms — clients can use this to order / dedupe. */
   at: number;
+  /** Optional event-kind-specific payload (e.g. comment_id for comment.*). */
+  payload?: Record<string, unknown>;
 }
 
 type Subscriber = (event: ItemEvent) => void;

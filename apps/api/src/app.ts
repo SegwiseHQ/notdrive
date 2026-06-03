@@ -18,6 +18,9 @@ import drive from './routes/drive.js';
 import importRoutes from './routes/import.js';
 import itemAssets from './routes/itemAssets.js';
 import itemStream from './routes/itemStream.js';
+import comments from './routes/comments.js';
+import commentsById from './routes/commentsById.js';
+import notifications from './routes/notifications.js';
 import recent from './routes/recent.js';
 
 export function buildApp() {
@@ -35,6 +38,9 @@ export function buildApp() {
     .route('/workspaces', workspaces)
     .route('/items', items)
     .route('/items', itemTags)
+    .route('/items', comments)
+    .route('/comments', commentsById)
+    .route('/notifications', notifications)
     .route('/tags', tags)
     .route('/views', views)
     .route('/search', search)

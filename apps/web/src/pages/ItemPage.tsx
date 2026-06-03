@@ -6,6 +6,7 @@ import {
   Link as LinkIcon,
   Lock,
   LockOpen,
+  MessageSquare,
   MoreHorizontal,
   RefreshCw,
   Share2,
@@ -16,6 +17,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { CommentsPanel } from '../features/comments/CommentsPanel.js';
 import { DrivePicker } from '../features/drive-picker/DrivePicker.js';
 import { PageEditor, type PageEditorHandle } from '../features/editor/Editor.js';
 import { PageShareDialog } from '../features/share/PageShareDialog.js';
@@ -34,6 +36,26 @@ export function ItemPage() {
   const select = useSelection((s) => s.select);
   const goToParent = useNavigateToParent();
   const [shareOpen, setShareOpen] = useState(false);
+  // Open the comments drawer when ?comments=1 is in the URL — lets the
+  // notification dropdown deep-link straight into the panel without a
+  // post-navigate setState dance.
+  const commentsOpen = params.get('comments') === '1';
+  const setCommentsOpen = (o: boolean) => {
+    const next = new URLSearchParams(params);
+    if (o) next.set('comments', '1');
+    else next.delete('comments');
+    setParams(next, { replace: true });
+  };
+  // Selection captured from the bubble toolbar's Comment button. While set,
+  // the comments drawer renders a "pending inline" composer. On submit we
+  // create the thread server-side, then apply the comment mark to the
+  // captured range via the editor's imperative API.
+  const [pendingInline, setPendingInline] = useState<
+    { from: number; to: number; text: string } | null
+  >(null);
+  // Thread to scroll to in the drawer when the user clicks an inline
+  // highlight in the editor.
+  const [focusThreadId, setFocusThreadId] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -83,7 +105,25 @@ export function ItemPage() {
           by: string;
           at: number;
         };
-        // Suppress self-events — saves from this tab don't need a banner.
+        // Comment events handled BEFORE the self-event guard. They mutate
+        // local state (strip an editor mark, invalidate cache queries)
+        // that the actor's own tab also needs — the mutation handler
+        // already invalidates `comments`, but stripping the mark on
+        // thread-delete must happen here so the highlight goes away in
+        // the tab that did the delete too. All operations are idempotent
+        // so re-processing is safe.
+        if (data.kind.startsWith('comment.')) {
+          qc.invalidateQueries({ queryKey: ['comments', itemId] });
+          if (data.kind === 'comment.thread_deleted') {
+            const threadId = (data as unknown as { payload?: { thread_id?: string } }).payload
+              ?.thread_id;
+            if (threadId) editorRef.current?.stripCommentMark(threadId);
+            qc.invalidateQueries({ queryKey: ['notifications', wsId] });
+          }
+          return;
+        }
+        // Suppress non-comment self-events — saves from this tab don't
+        // need a banner.
         if (data.by === currentUserId) return;
         if (data.kind === 'archived') {
           // Archive isn't debounced — bounce immediately.
@@ -110,7 +150,7 @@ export function ItemPage() {
       es.close();
       if (bannerTimer.current) clearTimeout(bannerTimer.current);
     };
-  }, [itemId, wsId, currentUserId, itemQuery.data?.parent_id, goToParent]);
+  }, [itemId, wsId, currentUserId, itemQuery.data?.parent_id, goToParent, qc]);
   // Members list powers the @ mention picker. Cached across page navigations
   // since membership rarely changes; refetched lazily by TanStack defaults.
   const membersQuery = useQuery({
@@ -256,6 +296,13 @@ export function ItemPage() {
           title={item.is_favorite ? 'Unstar' : 'Star'}
         >
           <Star className={`size-4 ${item.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+        </button>
+        <button
+          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+          onClick={() => setCommentsOpen(true)}
+          title="Comments"
+        >
+          <MessageSquare className="size-4" />
         </button>
         <button
           onClick={() => setShareOpen(true)}
@@ -426,6 +473,14 @@ export function ItemPage() {
                 patch.mutate({ body });
               }, 600);
             }}
+            onCommentMarkClick={(threadId) => {
+              setFocusThreadId(threadId);
+              setCommentsOpen(true);
+            }}
+            onCommentSelection={(sel) => {
+              setPendingInline(sel);
+              setCommentsOpen(true);
+            }}
           />
         </div>
       )}
@@ -517,6 +572,43 @@ export function ItemPage() {
           }}
         />
       )}
+      <CommentsPanel
+        itemId={item.id}
+        open={commentsOpen}
+        onOpenChange={(o) => {
+          setCommentsOpen(o);
+          // Closing the drawer drops the pending inline thread — the
+          // user can re-open by selecting text again.
+          if (!o) setPendingInline(null);
+        }}
+        members={mentionItems}
+        currentUserId={currentUserId}
+        isAdmin={(() => {
+          const ws = meQuery.data?.workspaces.find((w) => w.id === wsId);
+          return ws?.role === 'admin' || ws?.role === 'owner';
+        })()}
+        pendingInline={pendingInline}
+        onPendingSubmit={async (body) => {
+          if (!pendingInline) return;
+          // Create the inline thread + first comment in one round-trip,
+          // then immediately wrap the captured range with the comment mark
+          // so the highlight appears the moment the drawer settles.
+          const created = await http.createComment(item.id, {
+            body,
+            anchor: pendingInline.text.slice(0, 280),
+          });
+          editorRef.current?.applyCommentMark(
+            pendingInline.from,
+            pendingInline.to,
+            created.thread_id,
+          );
+          setPendingInline(null);
+          qc.invalidateQueries({ queryKey: ['comments', item.id] });
+        }}
+        onPendingCancel={() => setPendingInline(null)}
+        focusThreadId={focusThreadId}
+        onFocusConsumed={() => setFocusThreadId(null)}
+      />
       {driveId ? (
         <ShareDialog
           fileId={driveId}
