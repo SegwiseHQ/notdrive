@@ -28,6 +28,15 @@ function isHttpsOrigin() {
   }
 }
 
+// WEB_ORIGIN supports a comma-separated allowlist (consumed by the CORS
+// middleware). Redirects need a single canonical destination — first entry
+// in the list wins, falling back to the whole string for safety.
+function primaryWebOrigin(): string {
+  const raw = loadServerEnv().WEB_ORIGIN;
+  const first = raw.split(',')[0]?.trim();
+  return first && first.length > 0 ? first : raw;
+}
+
 app.get('/google/start', (c) => {
   const state = newId();
   const https = isHttpsOrigin();
@@ -77,7 +86,7 @@ app.get('/google/callback', async (c) => {
     const domain = (profile.email.split('@')[1] ?? '').toLowerCase();
     if (!allowed.includes(domain)) {
       logger.warn({ email: profile.email, domain, allowed }, 'login rejected: domain not allowed');
-      const dest = new URL('/login', loadServerEnv().WEB_ORIGIN);
+      const dest = new URL('/login', primaryWebOrigin());
       dest.searchParams.set('error', 'domain_not_allowed');
       dest.searchParams.set('domain', domain);
       return c.redirect(dest.toString());
@@ -136,7 +145,7 @@ app.get('/google/callback', async (c) => {
   });
 
   logger.info({ userId, https }, 'login ok');
-  return c.redirect(loadServerEnv().WEB_ORIGIN);
+  return c.redirect(primaryWebOrigin());
 });
 
 app.post('/logout', async (c) => {
