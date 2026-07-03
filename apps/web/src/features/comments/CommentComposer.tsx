@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MentionMenu, type MentionItem } from '../editor/MentionMenu.js';
+import { type MentionItem, MentionMenu } from '../editor/MentionMenu.js';
 import { encodeMention } from './mentions.js';
 
 interface Props {
@@ -46,7 +46,7 @@ export function CommentComposer({
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
-  }, [text]);
+  });
 
   const closePopup = useCallback(() => {
     setTriggerIndex(null);
@@ -58,11 +58,7 @@ export function CommentComposer({
     const q = query.toLowerCase();
     if (!q) return members.slice(0, 8);
     return members
-      .filter(
-        (m) =>
-          m.label.toLowerCase().includes(q) ||
-          m.email.toLowerCase().includes(q),
-      )
+      .filter((m) => m.label.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
       .slice(0, 8);
   })();
 

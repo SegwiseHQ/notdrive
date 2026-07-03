@@ -1,9 +1,9 @@
-import { LRUCache } from 'lru-cache';
 import type { DriveTreeNode } from '@notdrive/shared';
-import { driveClientFor } from './client.js';
-import { withDriveLimit } from './limiter.js';
+import { LRUCache } from 'lru-cache';
 import { loadServerEnv } from '../env.js';
 import { logger } from '../util/logger.js';
+import { driveClientFor } from './client.js';
+import { withDriveLimit } from './limiter.js';
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
 const STALE_MS = 5 * 60 * 1000; // serve-cached threshold
@@ -26,7 +26,8 @@ function keyOf(userId: string, root: string, depth: number) {
 
 async function listChildren(userId: string, parentId: string) {
   const drive = await driveClientFor(userId);
-  const items: Array<{ id: string; name: string; mimeType: string; modifiedTime: string | null }> = [];
+  const items: Array<{ id: string; name: string; mimeType: string; modifiedTime: string | null }> =
+    [];
   let pageToken: string | undefined;
   do {
     const res = await withDriveLimit(userId, () =>
@@ -41,8 +42,9 @@ async function listChildren(userId: string, parentId: string) {
       }),
     );
     for (const f of res.data.files ?? []) {
+      if (!f.id) continue;
       items.push({
-        id: f.id!,
+        id: f.id,
         name: f.name ?? '(unnamed)',
         mimeType: f.mimeType ?? 'application/octet-stream',
         modifiedTime: f.modifiedTime ?? null,

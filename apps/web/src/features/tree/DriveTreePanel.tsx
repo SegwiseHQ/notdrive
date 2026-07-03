@@ -1,6 +1,14 @@
 import { type DriveTreeNode, type ItemDTO, sortDriveNodes } from '@notdrive/shared';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronRight, File as FileIcon, FileText, Folder, Link as LinkIcon, Plus } from 'lucide-react';
+import {
+  Check,
+  ChevronRight,
+  File as FileIcon,
+  FileText,
+  Folder,
+  Link as LinkIcon,
+  Plus,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { http } from '../../lib/http.js';
@@ -110,6 +118,7 @@ function DriveRow({
       >
         {!isFolder && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               toggleDrive(node.id);
@@ -128,6 +137,7 @@ function DriveRow({
         )}
         {isFolder && <span className="w-4 shrink-0" />}
         <button
+          type="button"
           onClick={onClick}
           className="flex min-w-0 flex-1 items-center gap-0.5 text-left"
         >
@@ -148,9 +158,7 @@ function DriveRow({
           ) : (
             <FileIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
           )}
-          <span className="ml-1 min-w-0 flex-1 truncate">
-            {linked ? linked.title : node.name}
-          </span>
+          <span className="ml-1 min-w-0 flex-1 truncate">{linked ? linked.title : node.name}</span>
         </button>
         {linked && (
           <LinkIcon className="size-3 shrink-0 text-muted-foreground/70" aria-label="Linked" />
@@ -160,6 +168,7 @@ function DriveRow({
             parentFolderId={node.id}
             trigger={
               <button
+                type="button"
                 onClick={(e) => e.stopPropagation()}
                 className="flex size-5 items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100"
                 title={`Create new Drive file in "${node.name}"`}

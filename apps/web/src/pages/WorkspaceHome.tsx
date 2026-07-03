@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { ViewContainer } from '../views/ViewContainer.js';
 import { http } from '../lib/http.js';
+import { ViewContainer } from '../views/ViewContainer.js';
 
 export function WorkspaceHome() {
   const { wsId = '' } = useParams();

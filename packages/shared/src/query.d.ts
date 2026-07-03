@@ -16,53 +16,65 @@
  * Free terms (bare words or "quoted phrases") match titles + drive name.
  */
 export type CmpOp = '<' | '>' | '=';
-export type Term = {
-    kind: 'text';
-    value: string;
-    phrase: boolean;
-} | {
-    kind: 'tag';
-    name: string;
-} | {
-    kind: 'mime';
-    value: string;
-} | {
-    kind: 'modified';
-    op: CmpOp;
-    value: ModifiedValue;
-} | {
-    kind: 'is';
-    flag: 'favorite' | 'archived' | 'page' | 'file';
-} | {
-    kind: 'in';
-    value: string;
-};
-export type ModifiedValue = {
-    kind: 'relative_days';
-    days: number;
-} | {
-    kind: 'date';
-    iso: string;
-};
-export type Ast = {
-    kind: 'term';
-    term: Term;
-} | {
-    kind: 'not';
-    inner: Ast;
-} | {
-    kind: 'and';
-    left: Ast;
-    right: Ast;
-} | {
-    kind: 'or';
-    left: Ast;
-    right: Ast;
-} | {
-    kind: 'empty';
-};
-export declare class QueryParseError extends Error {
-}
+export type Term =
+  | {
+      kind: 'text';
+      value: string;
+      phrase: boolean;
+    }
+  | {
+      kind: 'tag';
+      name: string;
+    }
+  | {
+      kind: 'mime';
+      value: string;
+    }
+  | {
+      kind: 'modified';
+      op: CmpOp;
+      value: ModifiedValue;
+    }
+  | {
+      kind: 'is';
+      flag: 'favorite' | 'archived' | 'page' | 'file';
+    }
+  | {
+      kind: 'in';
+      value: string;
+    };
+export type ModifiedValue =
+  | {
+      kind: 'relative_days';
+      days: number;
+    }
+  | {
+      kind: 'date';
+      iso: string;
+    };
+export type Ast =
+  | {
+      kind: 'term';
+      term: Term;
+    }
+  | {
+      kind: 'not';
+      inner: Ast;
+    }
+  | {
+      kind: 'and';
+      left: Ast;
+      right: Ast;
+    }
+  | {
+      kind: 'or';
+      left: Ast;
+      right: Ast;
+    }
+  | {
+      kind: 'empty';
+    };
+export declare class QueryParseError extends Error {}
 export declare function parseQuery(input: string): Ast;
 /** Walk the AST, calling visitor for each terminal `term`. */
 export declare function collectTerms(ast: Ast, out?: Term[]): Term[];

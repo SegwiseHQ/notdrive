@@ -1,21 +1,23 @@
 import type { Editor, Range } from '@tiptap/core';
 import Mention from '@tiptap/extension-mention';
 import { ReactRenderer } from '@tiptap/react';
+import type { SuggestionKeyDownProps } from '@tiptap/suggestion';
+import type { ComponentProps } from 'react';
 import tippy, { type Instance as TippyInstance } from 'tippy.js';
 import { type MentionItem, MentionMenu } from './MentionMenu.js';
+
+type MentionCommandItem = { id: string; label: string };
 
 type MentionSuggestionProps = {
   editor: Editor;
   range: Range;
   query: string;
-  command: (item: { id: string; label: string }) => void;
+  command: (item: MentionCommandItem) => void;
   items: MentionItem[];
   clientRect?: (() => DOMRect | null) | null;
 };
 
-type MentionKeyDownProps = {
-  event: KeyboardEvent;
-};
+type MentionMenuProps = ComponentProps<typeof MentionMenu>;
 
 /**
  * Build a TipTap Mention extension that uses the supplied member list as the
@@ -48,14 +50,14 @@ export function buildMentionExtension(getMembers: () => MentionItem[]) {
       render: () => {
         let component: ReactRenderer<
           { onKeyDown: (e: KeyboardEvent) => boolean },
-          MentionSuggestionProps
+          MentionMenuProps
         > | null = null;
         let popup: TippyInstance[] | null = null;
         return {
           onStart: (props: MentionSuggestionProps) => {
             const renderer = new ReactRenderer<
               { onKeyDown: (e: KeyboardEvent) => boolean },
-              MentionSuggestionProps
+              MentionMenuProps
             >(MentionMenu, {
               props,
               editor: props.editor,
@@ -79,7 +81,7 @@ export function buildMentionExtension(getMembers: () => MentionItem[]) {
               getReferenceClientRect: props.clientRect as () => DOMRect,
             });
           },
-          onKeyDown: (props: MentionKeyDownProps) => {
+          onKeyDown: (props: SuggestionKeyDownProps) => {
             if (props.event.key === 'Escape') {
               popup?.[0]?.hide();
               return true;

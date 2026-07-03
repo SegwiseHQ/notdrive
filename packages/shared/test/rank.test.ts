@@ -39,7 +39,10 @@ describe('rank.between', () => {
   it('sequence produces monotonically increasing ranks', () => {
     const ranks = sequence(10, INITIAL_RANK);
     for (let i = 1; i < ranks.length; i++) {
-      expect(ranks[i]! > ranks[i - 1]!).toBe(true);
+      const current = ranks[i];
+      const previous = ranks[i - 1];
+      if (!current || !previous) throw new Error('missing rank in sequence');
+      expect(current > previous).toBe(true);
     }
   });
 });

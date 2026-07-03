@@ -7,13 +7,13 @@ function currentWorkspaceId(): string | undefined {
   // Prefer the workspace id in the current URL (/w/:wsId/…) over localStorage,
   // so requests always target the workspace the user is actually viewing.
   const match = /\/w\/([^/?#]+)/.exec(window.location.pathname);
-  if (match && match[1]) return match[1];
+  if (match?.[1]) return match[1];
   return localStorage.getItem('notdrive.workspace_id') ?? undefined;
 }
 
 export const api = hc<AppType>(API_ORIGIN, {
   init: { credentials: 'include' },
-  fetch: (input, init) => {
+  fetch: (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
     const headers = new Headers(init?.headers);
     const ws = currentWorkspaceId();
     if (ws && !headers.has('x-workspace-id')) headers.set('x-workspace-id', ws);

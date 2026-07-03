@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { http } from '../../lib/http.js';
 
 const PRESETS = [
@@ -34,6 +34,7 @@ export function ViewsList({ wsId }: { wsId: string }) {
         <div className="px-2 py-1 text-xs text-muted-foreground">
           {missingPresets.map((p) => (
             <button
+              type="button"
               key={p.name}
               onClick={() => create.mutate(p)}
               className="mr-1 rounded-md px-1.5 py-0.5 text-[11px] hover:bg-accent"
@@ -71,12 +72,14 @@ export function ViewsList({ wsId }: { wsId: string }) {
           />
           <div className="flex gap-1">
             <button
+              type="button"
               onClick={() => name && create.mutate({ name, query, layout: 'list' })}
               className="flex-1 rounded-md bg-primary px-2 py-0.5 text-xs text-primary-foreground"
             >
               Save
             </button>
             <button
+              type="button"
               onClick={() => setCreating(false)}
               className="rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent"
             >
@@ -86,6 +89,7 @@ export function ViewsList({ wsId }: { wsId: string }) {
         </div>
       ) : (
         <button
+          type="button"
           onClick={() => setCreating(true)}
           className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
         >

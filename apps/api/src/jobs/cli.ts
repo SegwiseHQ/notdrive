@@ -1,7 +1,7 @@
-import { drivePollTick } from './drivePoll.js';
 import { archivePurgeTick } from './archivePurge.js';
-import { sessionGcTick } from './sessionGc.js';
+import { drivePollTick } from './drivePoll.js';
 import { inviteGcTick } from './inviteGc.js';
+import { sessionGcTick } from './sessionGc.js';
 
 const jobs = {
   'drive-poll': drivePollTick,

@@ -1,8 +1,8 @@
 import { type Role, roleAtLeast } from '@notdrive/shared';
 import { and, eq } from 'drizzle-orm';
 import type { MiddlewareHandler } from 'hono';
-import { db, schema } from '../db/index.js';
 import type { Variables } from '../context.js';
+import { db, schema } from '../db/index.js';
 import { badRequest, forbidden, notFound } from '../util/errors.js';
 
 export function requireWorkspace(
@@ -12,8 +12,7 @@ export function requireWorkspace(
     const user = c.get('user');
     if (!user) throw forbidden('auth required');
 
-    const wsId =
-      c.req.param('wsId') ?? c.req.header('x-workspace-id') ?? c.req.query('ws');
+    const wsId = c.req.param('wsId') ?? c.req.header('x-workspace-id') ?? c.req.query('ws');
     if (!wsId) throw badRequest('missing X-Workspace-Id header');
 
     const row = await db

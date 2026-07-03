@@ -2,9 +2,9 @@ import AdmZip from 'adm-zip';
 import { eq } from 'drizzle-orm';
 import { Marked } from 'marked';
 import { db, schema } from '../db/index.js';
-import { createItem } from './items.js';
-import { logger } from '../util/logger.js';
 import { newId } from '../util/ids.js';
+import { logger } from '../util/logger.js';
+import { createItem } from './items.js';
 
 const MAX_TOTAL_UNCOMPRESSED_BYTES = 50 * 1024 * 1024; // 50 MB
 const MAX_FILES = 1000;
@@ -36,9 +36,9 @@ export interface ImportResult {
 }
 
 interface MdEntry {
-  path: string;       // e.g. "docs/getting-started.md"
+  path: string; // e.g. "docs/getting-started.md"
   segments: string[]; // ["docs", "getting-started.md"]
-  raw: string;        // markdown source
+  raw: string; // markdown source
 }
 
 /**
@@ -85,12 +85,18 @@ export async function importMarkdownZip(
     if (ext in IMAGE_CONTENT_TYPES) {
       const size = e.header.size;
       if (size > MAX_IMAGE_BYTES) {
-        result.errors.push({ path: name, reason: `image too large (${size} > ${MAX_IMAGE_BYTES})` });
+        result.errors.push({
+          path: name,
+          reason: `image too large (${size} > ${MAX_IMAGE_BYTES})`,
+        });
         continue;
       }
       totalImageBytes += size;
       if (totalImageBytes > MAX_TOTAL_IMAGE_BYTES) {
-        result.errors.push({ path: name, reason: 'image total exceeded 500 MB; later images skipped' });
+        result.errors.push({
+          path: name,
+          reason: 'image total exceeded 500 MB; later images skipped',
+        });
         // continue processing markdown — just don't ingest more images.
         continue;
       }
@@ -216,10 +222,7 @@ export async function importMarkdownZip(
         imageMap,
       });
       if (rewritten !== renderedHtml) {
-        await db
-          .update(schema.items)
-          .set({ body: rewritten })
-          .where(eq(schema.items.id, id));
+        await db.update(schema.items).set({ body: rewritten }).where(eq(schema.items.id, id));
       }
 
       result.created++;
@@ -288,8 +291,11 @@ async function ingestAndRewriteImages(args: {
   // per asset — use replaceAsync via Promise.all over matches.
   const imgRe = /<img\b([^>]*?)\bsrc="([^"]+)"([^>]*)>/g;
   const matches: RegExpExecArray[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = imgRe.exec(html)) !== null) matches.push(m);
+  let m = imgRe.exec(html);
+  while (m !== null) {
+    matches.push(m);
+    m = imgRe.exec(html);
+  }
   if (matches.length === 0) return html;
 
   const replacements = await Promise.all(
@@ -322,7 +328,7 @@ async function ingestAndRewriteImages(args: {
       // the Amplify rewrite rule in the README. Storing relative keeps the
       // HTML portable across deployments.
       const newSrc = `/item-assets/${assetId}`;
-      return { full: match[0], newTag: match[0]!.replace(src, newSrc) };
+      return { full: match[0], newTag: match[0]?.replace(src, newSrc) };
     }),
   );
 

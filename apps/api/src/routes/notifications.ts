@@ -1,10 +1,10 @@
 import { zValidator } from '@hono/zod-validator';
 import { notificationsMarkReadSchema } from '@notdrive/shared';
 import { Hono } from 'hono';
+import type { Variables } from '../context.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
 import { listForUser, markAllRead, markRead } from '../services/notifications.js';
-import type { Variables } from '../context.js';
 
 const app = new Hono<{ Variables: Variables }>();
 app.use('*', requireAuth, requireWorkspace('viewer'));

@@ -24,7 +24,7 @@ export function MembersPage() {
       const url = `${window.location.origin}/invites/accept?token=${res.token}`;
       setLastInviteUrl(url);
       void navigator.clipboard.writeText(url).catch(() => {});
-      toast.success(`Invite link copied to clipboard`);
+      toast.success('Invite link copied to clipboard');
       setEmail('');
     },
   });
@@ -67,21 +67,25 @@ export function MembersPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <label className="text-muted-foreground">Mode</label>
+            <label htmlFor="auto-share-mode" className="text-muted-foreground">
+              Mode
+            </label>
             <select
+              id="auto-share-mode"
               value={currentWs.auto_share_mode}
               disabled={!canManage}
-              onChange={(e) =>
-                patchWs.mutate({ auto_share_mode: e.target.value as AutoShareMode })
-              }
+              onChange={(e) => patchWs.mutate({ auto_share_mode: e.target.value as AutoShareMode })}
               className="rounded-md border border-border bg-background px-2 py-1 disabled:opacity-50"
             >
               <option value="off">Off — never auto-share</option>
               <option value="domain">Only files already shared org-wide / via link</option>
               <option value="all">All linked files</option>
             </select>
-            <label className="ml-3 text-muted-foreground">Role granted</label>
+            <label htmlFor="auto-share-role" className="ml-3 text-muted-foreground">
+              Role granted
+            </label>
             <select
+              id="auto-share-role"
               value={currentWs.auto_share_role}
               disabled={!canManage || currentWs.auto_share_mode === 'off'}
               onChange={(e) =>
@@ -98,9 +102,9 @@ export function MembersPage() {
           </div>
           {currentWs.auto_share_mode === 'domain' && (
             <p className="text-[11px] text-muted-foreground">
-              NotDrive checks each file's existing permissions. If it has a domain-wide share or
-              an "anyone with the link" permission, the file is shared with everyone in NotDrive.
-              Files shared narrowly with specific people are left untouched.
+              NotDrive checks each file's existing permissions. If it has a domain-wide share or an
+              "anyone with the link" permission, the file is shared with everyone in NotDrive. Files
+              shared narrowly with specific people are left untouched.
             </p>
           )}
         </div>
@@ -108,8 +112,11 @@ export function MembersPage() {
 
       <div className="mb-6 flex items-end gap-2">
         <div className="flex flex-col">
-          <label className="text-xs text-muted-foreground">Email</label>
+          <label htmlFor="invite-email" className="text-xs text-muted-foreground">
+            Email
+          </label>
           <input
+            id="invite-email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
@@ -117,8 +124,11 @@ export function MembersPage() {
           />
         </div>
         <div className="flex flex-col">
-          <label className="text-xs text-muted-foreground">Role</label>
+          <label htmlFor="invite-role" className="text-xs text-muted-foreground">
+            Role
+          </label>
           <select
+            id="invite-role"
             value={role}
             onChange={(e) => setRole(e.target.value as 'admin' | 'member' | 'viewer')}
             className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
@@ -129,6 +139,7 @@ export function MembersPage() {
           </select>
         </div>
         <button
+          type="button"
           onClick={() => email && invite.mutate()}
           className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
         >
@@ -149,6 +160,7 @@ export function MembersPage() {
               className="flex-1 truncate rounded-md border border-border bg-background px-2 py-1 font-mono text-xs"
             />
             <button
+              type="button"
               onClick={() => {
                 void navigator.clipboard.writeText(lastInviteUrl);
                 toast.success('Copied');
@@ -159,7 +171,8 @@ export function MembersPage() {
             </button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            They must be signed in with the invited email when they open this link. Expires in 7 days.
+            They must be signed in with the invited email when they open this link. Expires in 7
+            days.
           </p>
         </div>
       )}
@@ -189,6 +202,7 @@ export function MembersPage() {
                   <option value="owner">owner</option>
                 </select>
                 <button
+                  type="button"
                   onClick={() => {
                     if (confirm(`Remove ${m.email}?`)) remove.mutate(m.user_id);
                   }}

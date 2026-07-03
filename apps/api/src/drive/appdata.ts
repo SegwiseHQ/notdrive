@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
+import { logger } from '../util/logger.js';
 import { driveClientFor } from './client.js';
 import { withDriveLimit } from './limiter.js';
-import { logger } from '../util/logger.js';
 
 /**
  * Store-of-last-resort for NotDrive native page bodies.
@@ -55,10 +55,7 @@ export async function pushBody(
       return existingFileId;
     } catch (err) {
       // The cached id may be stale (file deleted / trashed). Fall through to create.
-      logger.warn(
-        { itemId, err: (err as Error).message },
-        'appdata update failed; recreating',
-      );
+      logger.warn({ itemId, err: (err as Error).message }, 'appdata update failed; recreating');
     }
   }
 
@@ -73,7 +70,9 @@ export async function pushBody(
       fields: 'id',
     }),
   );
-  return res.data.id!;
+  const fileId = res.data.id;
+  if (!fileId) throw new Error('Drive appData create did not return a file id');
+  return fileId;
 }
 
 export async function pullBody(userId: string, fileId: string): Promise<string | null> {

@@ -1,8 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import Database from 'better-sqlite3';
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import pg from 'pg';
 import { env } from '../env.js';
 
@@ -22,8 +22,8 @@ function pgSslOption(): PgSslOption {
 }
 
 const { Pool } = pg;
-import * as sqliteSchema from './schema.sqlite.js';
 import * as pgSchema from './schema.postgres.js';
+import * as sqliteSchema from './schema.sqlite.js';
 
 export type Schema = typeof sqliteSchema;
 
@@ -34,7 +34,7 @@ const usePg = env.DB_DRIVER === 'postgres';
 
 let dbInstance: ReturnType<typeof drizzleSqlite<Schema>> | ReturnType<typeof drizzlePg<Schema>>;
 let sqliteClient: Database.Database | null = null;
-let pgPool: Pool | null = null;
+let pgPool: pg.Pool | null = null;
 
 if (usePg) {
   pgPool = new Pool({ connectionString: env.DATABASE_URL, ssl: pgSslOption() });

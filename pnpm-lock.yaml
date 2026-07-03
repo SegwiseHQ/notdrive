@@ -41,6 +41,9 @@ importers:
       drizzle-orm:
         specifier: 0.36.4
         version: 0.36.4(@types/better-sqlite3@7.6.12)(@types/pg@8.11.10)(@types/react@18.3.13)(better-sqlite3@11.5.0)(pg@8.13.1)(react@18.3.1)
+      google-auth-library:
+        specifier: 9.15.1
+        version: 9.15.1
       googleapis:
         specifier: 144.0.0
         version: 144.0.0
@@ -3449,6 +3452,7 @@ packages:
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vite-node@2.1.8:

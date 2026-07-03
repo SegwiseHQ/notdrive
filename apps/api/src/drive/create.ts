@@ -1,9 +1,9 @@
 import type { DriveCreateInput } from '@notdrive/shared';
 import { db, schema } from '../db/index.js';
 import { now } from '../util/ids.js';
+import { DRIVE_FILE_FIELDS } from './cache.js';
 import { driveClientFor } from './client.js';
 import { withDriveLimit } from './limiter.js';
-import { DRIVE_FILE_FIELDS } from './cache.js';
 import { invalidateTreeCache } from './tree.js';
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
@@ -33,6 +33,8 @@ export async function createDriveFile(
     }),
   );
   const f = res.data;
+  const driveFileId = f.id;
+  if (!driveFileId) throw new Error('Drive file create did not return a file id');
   const ts = now();
   const modified = f.modifiedTime ? Date.parse(f.modifiedTime) : ts;
 
@@ -40,7 +42,7 @@ export async function createDriveFile(
   await db
     .insert(schema.drive_file_cache)
     .values({
-      drive_file_id: f.id!,
+      drive_file_id: driveFileId,
       workspace_id: workspaceId,
       name: f.name ?? input.name,
       mime_type: f.mimeType ?? input.mime_type,
@@ -71,7 +73,7 @@ export async function createDriveFile(
   invalidateTreeCache(userId);
 
   return {
-    drive_file_id: f.id!,
+    drive_file_id: driveFileId,
     name: f.name ?? input.name,
     mime_type: f.mimeType ?? input.mime_type,
     web_view_link: f.webViewLink ?? null,

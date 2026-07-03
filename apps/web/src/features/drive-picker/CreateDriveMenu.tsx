@@ -1,6 +1,16 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, FolderPlus, Plus, Presentation, Sheet, Shapes, SquarePen, ListChecks, Globe } from 'lucide-react';
+import {
+  FileText,
+  FolderPlus,
+  Globe,
+  ListChecks,
+  Plus,
+  Presentation,
+  Shapes,
+  Sheet,
+  SquarePen,
+} from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { http } from '../../lib/http.js';
@@ -13,14 +23,54 @@ interface Option {
 }
 
 const OPTIONS: Option[] = [
-  { label: 'Google Doc', defaultName: 'Untitled document', mime: 'application/vnd.google-apps.document', Icon: FileText },
-  { label: 'Google Sheet', defaultName: 'Untitled spreadsheet', mime: 'application/vnd.google-apps.spreadsheet', Icon: Sheet },
-  { label: 'Google Slides', defaultName: 'Untitled presentation', mime: 'application/vnd.google-apps.presentation', Icon: Presentation },
-  { label: 'Google Drawing', defaultName: 'Untitled drawing', mime: 'application/vnd.google-apps.drawing', Icon: Shapes },
-  { label: 'Google Form', defaultName: 'Untitled form', mime: 'application/vnd.google-apps.form', Icon: ListChecks },
-  { label: 'Google Script', defaultName: 'Untitled script', mime: 'application/vnd.google-apps.script', Icon: SquarePen },
-  { label: 'Google Site', defaultName: 'Untitled site', mime: 'application/vnd.google-apps.site', Icon: Globe },
-  { label: 'Folder', defaultName: 'Untitled folder', mime: 'application/vnd.google-apps.folder', Icon: FolderPlus },
+  {
+    label: 'Google Doc',
+    defaultName: 'Untitled document',
+    mime: 'application/vnd.google-apps.document',
+    Icon: FileText,
+  },
+  {
+    label: 'Google Sheet',
+    defaultName: 'Untitled spreadsheet',
+    mime: 'application/vnd.google-apps.spreadsheet',
+    Icon: Sheet,
+  },
+  {
+    label: 'Google Slides',
+    defaultName: 'Untitled presentation',
+    mime: 'application/vnd.google-apps.presentation',
+    Icon: Presentation,
+  },
+  {
+    label: 'Google Drawing',
+    defaultName: 'Untitled drawing',
+    mime: 'application/vnd.google-apps.drawing',
+    Icon: Shapes,
+  },
+  {
+    label: 'Google Form',
+    defaultName: 'Untitled form',
+    mime: 'application/vnd.google-apps.form',
+    Icon: ListChecks,
+  },
+  {
+    label: 'Google Script',
+    defaultName: 'Untitled script',
+    mime: 'application/vnd.google-apps.script',
+    Icon: SquarePen,
+  },
+  {
+    label: 'Google Site',
+    defaultName: 'Untitled site',
+    mime: 'application/vnd.google-apps.site',
+    Icon: Globe,
+  },
+  {
+    label: 'Folder',
+    defaultName: 'Untitled folder',
+    mime: 'application/vnd.google-apps.folder',
+    Icon: FolderPlus,
+  },
 ];
 
 export function CreateDriveMenu({
@@ -71,7 +121,10 @@ export function CreateDriveMenu({
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         {trigger ?? (
-          <button className="flex items-center gap-1 rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background hover:opacity-90">
+          <button
+            type="button"
+            className="flex items-center gap-1 rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background hover:opacity-90"
+          >
             <Plus className="size-3" /> New
           </button>
         )}

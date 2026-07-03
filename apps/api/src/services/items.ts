@@ -63,7 +63,10 @@ async function getParentVisibility(
   return { visibility: row.visibility as 'workspace' | 'private', owner_id: row.owner_id };
 }
 
-async function lastSiblingRank(workspaceId: string, parentId: string | null): Promise<string | undefined> {
+async function lastSiblingRank(
+  workspaceId: string,
+  parentId: string | null,
+): Promise<string | undefined> {
   const rows = await db
     .select({ rank: schema.items.rank })
     .from(schema.items)
@@ -187,10 +190,7 @@ async function collectDescendantIds(workspaceId: string, rootId: string): Promis
       .select({ id: schema.items.id })
       .from(schema.items)
       .where(
-        and(
-          eq(schema.items.workspace_id, workspaceId),
-          inArray(schema.items.parent_id, frontier),
-        ),
+        and(eq(schema.items.workspace_id, workspaceId), inArray(schema.items.parent_id, frontier)),
       );
     if (children.length === 0) break;
     const ids = children.map((r) => r.id);
@@ -256,18 +256,14 @@ export async function patchItem(
   }
 
   // Only run the items UPDATE if something on items actually changed.
-  if (
-    patch.title !== undefined ||
-    patch.body !== undefined ||
-    patch.visibility !== undefined
-  ) {
-    const newVisibility = patch.visibility ?? existing.visibility;
+  if (patch.title !== undefined || patch.body !== undefined || patch.visibility !== undefined) {
+    const newVisibility = (patch.visibility ?? existing.visibility) as 'workspace' | 'private';
     const newOwnerId =
       patch.visibility === undefined
         ? existing.owner_id
         : patch.visibility === 'private'
-        ? userId
-        : null;
+          ? userId
+          : null;
     await db
       .update(schema.items)
       .set({
@@ -358,7 +354,9 @@ export async function moveItem(
     .where(
       and(
         eq(schema.items.workspace_id, workspaceId),
-        args.parent_id === null ? isNull(schema.items.parent_id) : eq(schema.items.parent_id, args.parent_id),
+        args.parent_id === null
+          ? isNull(schema.items.parent_id)
+          : eq(schema.items.parent_id, args.parent_id),
       ),
     )
     .orderBy(asc(schema.items.rank));
@@ -416,7 +414,12 @@ export async function moveItem(
   publishItemEvent(id, { kind: 'moved', by: userId, at: ts });
 }
 
-export async function archiveItem(workspaceId: string, userId: string, id: string, reason?: string) {
+export async function archiveItem(
+  workspaceId: string,
+  userId: string,
+  id: string,
+  reason?: string,
+) {
   const existing = await requireItem(workspaceId, id);
   assertCanMutate(existing, userId);
   const ts = now();
@@ -513,10 +516,7 @@ export async function duplicateItem(
 
   // Tags carried over so the duplicate inherits classification.
   const tagLinks = allOldIds.length
-    ? await db
-        .select()
-        .from(schema.item_tags)
-        .where(inArray(schema.item_tags.item_id, allOldIds))
+    ? await db.select().from(schema.item_tags).where(inArray(schema.item_tags.item_id, allOldIds))
     : [];
 
   // Root sibling-rank: append after the source's existing siblings so the
@@ -526,12 +526,14 @@ export async function duplicateItem(
   const rootRank = between(lastRank, undefined) || INITIAL_RANK;
 
   const ts = now();
-  const newRootId = idMap.get(sourceId)!;
+  const newRootId = idMap.get(sourceId);
+  if (!newRootId) throw new Error('duplicate source id was not mapped');
 
   await db.transaction(async (tx) => {
     for (const old of oldItems) {
       const isRoot = old.id === sourceId;
-      const newRowId = idMap.get(old.id)!;
+      const newRowId = idMap.get(old.id);
+      if (!newRowId) throw new Error(`duplicate item id was not mapped: ${old.id}`);
       // Descendant ranks are unique within their original sub-tree; reusing
       // them under the new parent is safe since they only collide with
       // their fellow new descendants (same sub-tree mapping).
@@ -571,10 +573,14 @@ export async function duplicateItem(
     }
 
     for (const a of oldAssets) {
+      const newAssetId = assetIdMap.get(a.id);
+      const newItemId = idMap.get(a.item_id);
+      if (!newAssetId) throw new Error(`duplicate asset id was not mapped: ${a.id}`);
+      if (!newItemId) throw new Error(`duplicate asset item id was not mapped: ${a.item_id}`);
       await tx.insert(schema.item_assets).values({
-        id: assetIdMap.get(a.id)!,
+        id: newAssetId,
         workspace_id: workspaceId,
-        item_id: idMap.get(a.item_id)!,
+        item_id: newItemId,
         content_type: a.content_type,
         byte_size: a.byte_size,
         data: a.data,
@@ -785,28 +791,28 @@ export async function hydrate(
     : [];
   const driveMap = new Map(drives.map((d) => [d.drive_file_id, d]));
 
-  return rows.map((r) => ({
-    id: r.id,
-    workspace_id: r.workspace_id,
-    type: r.type as 'page' | 'file',
-    title: r.title,
-    parent_id: r.parent_id,
-    drive_file_id: r.drive_file_id,
-    rank: r.rank,
-    is_favorite: favSet.has(r.id),
-    is_archived: r.is_archived,
-    archived_at: r.archived_at,
-    body: r.body ?? null,
-    visibility: (r.visibility as 'workspace' | 'private') ?? 'workspace',
-    owner_id: r.owner_id,
-    created_at: r.created_at,
-    updated_at: r.updated_at,
-    tag_ids: tagMap.get(r.id) ?? [],
-    drive:
-      r.drive_file_id && driveMap.has(r.drive_file_id)
-        ? toDriveDto(driveMap.get(r.drive_file_id)!)
-        : null,
-  }));
+  return rows.map((r) => {
+    const drive = r.drive_file_id ? driveMap.get(r.drive_file_id) : undefined;
+    return {
+      id: r.id,
+      workspace_id: r.workspace_id,
+      type: r.type as 'page' | 'file',
+      title: r.title,
+      parent_id: r.parent_id,
+      drive_file_id: r.drive_file_id,
+      rank: r.rank,
+      is_favorite: favSet.has(r.id),
+      is_archived: r.is_archived,
+      archived_at: r.archived_at,
+      body: r.body ?? null,
+      visibility: (r.visibility as 'workspace' | 'private') ?? 'workspace',
+      owner_id: r.owner_id,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      tag_ids: tagMap.get(r.id) ?? [],
+      drive: drive ? toDriveDto(drive) : null,
+    };
+  });
 }
 
 function toDriveDto(d: typeof schema.drive_file_cache.$inferSelect) {
@@ -825,5 +831,6 @@ function toDriveDto(d: typeof schema.drive_file_cache.$inferSelect) {
 export async function getItem(workspaceId: string, userId: string, id: string): Promise<ItemDTO> {
   const r = await requireVisibleItem(workspaceId, userId, id);
   const [dto] = await hydrate(workspaceId, userId, [r]);
-  return dto!;
+  if (!dto) throw new Error(`visible item hydration returned no row: ${id}`);
+  return dto;
 }

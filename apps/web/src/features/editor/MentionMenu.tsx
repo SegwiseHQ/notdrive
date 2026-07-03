@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 
 export interface MentionItem {
   id: string;
@@ -17,10 +17,6 @@ interface Props {
 export const MentionMenu = forwardRef<{ onKeyDown: (e: KeyboardEvent) => boolean }, Props>(
   ({ items, command }, ref) => {
     const [selected, setSelected] = useState(0);
-
-    useEffect(() => {
-      setSelected(0);
-    }, [items]);
 
     useImperativeHandle(ref, () => ({
       onKeyDown: (e: KeyboardEvent) => {
@@ -54,6 +50,7 @@ export const MentionMenu = forwardRef<{ onKeyDown: (e: KeyboardEvent) => boolean
       <div className="w-72 max-h-72 overflow-auto rounded-md border border-border bg-card p-1 shadow-lg">
         {items.map((item, i) => (
           <button
+            type="button"
             key={item.id}
             onClick={() => command({ id: item.id, label: item.label })}
             onMouseEnter={() => setSelected(i)}

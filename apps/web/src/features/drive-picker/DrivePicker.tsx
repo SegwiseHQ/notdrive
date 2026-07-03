@@ -5,7 +5,10 @@ import { ChevronRight, File as FileIcon, Folder } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { http } from '../../lib/http.js';
 
-export function DrivePicker({ onClose, onPick }: { onClose: () => void; onPick: (fileId: string) => void }) {
+export function DrivePicker({
+  onClose,
+  onPick,
+}: { onClose: () => void; onPick: (fileId: string) => void }) {
   const tree = useQuery({ queryKey: ['drive-tree'], queryFn: () => http.driveTree(4) });
   const [q, setQ] = useState('');
 
@@ -34,7 +37,6 @@ export function DrivePicker({ onClose, onPick }: { onClose: () => void; onPick: 
           <div className="flex items-center gap-2 border-b border-border p-3">
             <Dialog.Title className="text-sm font-semibold">Link a Drive file</Dialog.Title>
             <input
-              autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Filter…"
@@ -42,7 +44,9 @@ export function DrivePicker({ onClose, onPick }: { onClose: () => void; onPick: 
             />
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-2">
-            {tree.isLoading && <div className="p-6 text-center text-muted-foreground">Loading Drive…</div>}
+            {tree.isLoading && (
+              <div className="p-6 text-center text-muted-foreground">Loading Drive…</div>
+            )}
             {tree.isError && (
               <div className="p-6 text-center text-destructive">
                 Failed to load Drive. Re-auth may be required.
@@ -77,7 +81,11 @@ function Node({
         style={{ paddingLeft: depth * 12 + 4 }}
       >
         {isFolder ? (
-          <button onClick={() => setOpen(!open)} className="rounded p-0.5 text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="rounded p-0.5 text-muted-foreground"
+          >
             <ChevronRight className={`size-3 transition ${open ? 'rotate-90' : ''}`} />
           </button>
         ) : (
@@ -91,6 +99,7 @@ function Node({
         <span className="min-w-0 flex-1 truncate text-sm">{node.name}</span>
         {!isFolder && (
           <button
+            type="button"
             onClick={() => onPick(node.id)}
             className="rounded-md bg-primary px-2 py-0.5 text-xs text-primary-foreground hover:opacity-90"
           >
@@ -98,7 +107,8 @@ function Node({
           </button>
         )}
       </div>
-      {open && node.children?.map((c) => <Node key={c.id} node={c} depth={depth + 1} onPick={onPick} />)}
+      {open &&
+        node.children?.map((c) => <Node key={c.id} node={c} depth={depth + 1} onPick={onPick} />)}
     </div>
   );
 }

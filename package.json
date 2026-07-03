@@ -18,7 +18,7 @@
     "dev:web": "pnpm --filter @notdrive/web run dev",
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
-    "lint": "biome check .",
+    "lint": "biome check . --error-on-warnings",
     "lint:fix": "biome check --write .",
     "test": "pnpm -r run test",
     "db:migrate": "pnpm --filter @notdrive/api run db:migrate",

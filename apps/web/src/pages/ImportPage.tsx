@@ -36,8 +36,8 @@ export function ImportPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Import</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Upload a ZIP of Markdown files. Folder structure becomes the page hierarchy. Each{' '}
-          <code className="rounded bg-muted px-1">.md</code> file becomes a NotDrive page; its
-          first H1 (if any) is used as the title, otherwise the filename.
+          <code className="rounded bg-muted px-1">.md</code> file becomes a NotDrive page; its first
+          H1 (if any) is used as the title, otherwise the filename.
         </p>
       </div>
 
@@ -81,14 +81,15 @@ export function ImportPage() {
           </span>
           <span className="text-muted-foreground">
             Only you will see these pages. Other workspace members won't see them in the sidebar,
-            search results, or anywhere else. You can flip individual pages back to workspace-visible
-            later.
+            search results, or anywhere else. You can flip individual pages back to
+            workspace-visible later.
           </span>
         </div>
       </label>
 
       <div className="mt-4 flex items-center gap-2">
         <button
+          type="button"
           onClick={() => file && upload.mutate(file)}
           disabled={!file || upload.isPending}
           className="flex items-center gap-1 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
@@ -97,6 +98,7 @@ export function ImportPage() {
         </button>
         {result && (
           <button
+            type="button"
             onClick={() => navigate(`/w/${wsId}`)}
             className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-muted"
           >
@@ -128,11 +130,11 @@ export function ImportPage() {
             </li>
             {result.errors.length > 0 && (
               <li>
-                <span className="font-medium text-destructive">{result.errors.length}</span>{' '}
-                error{result.errors.length === 1 ? '' : 's'}:
+                <span className="font-medium text-destructive">{result.errors.length}</span> error
+                {result.errors.length === 1 ? '' : 's'}:
                 <ul className="mt-1 ml-3 flex flex-col gap-0.5">
-                  {result.errors.slice(0, 10).map((e, i) => (
-                    <li key={i} className="truncate">
+                  {result.errors.slice(0, 10).map((e) => (
+                    <li key={`${e.path}-${e.reason}`} className="truncate">
                       <code className="text-foreground/80">{e.path}</code> — {e.reason}
                     </li>
                   ))}

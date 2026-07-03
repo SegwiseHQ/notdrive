@@ -1,12 +1,12 @@
+import type { CommentDTO, CommentThreadDTO } from '@notdrive/shared';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CommentDTO, CommentThreadDTO } from '@notdrive/shared';
 import { Pencil, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import type { MentionItem } from '../editor/MentionMenu.js';
 import { http } from '../../lib/http.js';
 import { cn } from '../../lib/utils.js';
+import type { MentionItem } from '../editor/MentionMenu.js';
 import { CommentComposer } from './CommentComposer.js';
 import { tokenizeCommentBody } from './mentions.js';
 
@@ -100,7 +100,7 @@ export function CommentsPanel({
       onFocusConsumed();
     }, 50);
     return () => clearTimeout(t);
-  }, [open, focusThreadId, threads.length, onFocusConsumed]);
+  }, [open, focusThreadId, onFocusConsumed]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -114,6 +114,7 @@ export function CommentsPanel({
             <Dialog.Title className="text-sm font-semibold">Comments</Dialog.Title>
             <Dialog.Close asChild>
               <button
+                type="button"
                 aria-label="Close"
                 className="rounded-md p-1 text-muted-foreground hover:bg-muted"
               >
@@ -123,9 +124,7 @@ export function CommentsPanel({
           </header>
 
           <div className="flex-1 overflow-y-auto">
-            {query.isLoading && (
-              <p className="px-4 py-3 text-xs text-muted-foreground">Loading…</p>
-            )}
+            {query.isLoading && <p className="px-4 py-3 text-xs text-muted-foreground">Loading…</p>}
 
             {/* Page-level thread first. Inline-with-existing-comments empty
                 state still renders the composer so users can start the
@@ -183,7 +182,8 @@ export function CommentsPanel({
 
             {!query.isLoading && !pageThread && inlineThreads.length === 0 && !pendingInline && (
               <p className="px-4 py-3 text-xs text-muted-foreground">
-                No comments yet. Start the discussion below, or select text in the page to comment on it.
+                No comments yet. Start the discussion below, or select text in the page to comment
+                on it.
               </p>
             )}
           </div>
@@ -229,10 +229,7 @@ function ThreadBlock({
   return (
     <li
       ref={registerRef}
-      className={cn(
-        'border-b border-border/60 transition',
-        pulse && 'ring-2 ring-yellow-400/60',
-      )}
+      className={cn('border-b border-border/60 transition', pulse && 'ring-2 ring-yellow-400/60')}
     >
       <div className="px-4 py-3">
         {thread?.anchor && (
@@ -263,11 +260,7 @@ function ThreadBlock({
 
         {persistentComposer ? (
           <div className="mt-3">
-            <CommentComposer
-              members={members}
-              busy={composerBusy}
-              onSubmit={onSubmitComposer}
-            />
+            <CommentComposer members={members} busy={composerBusy} onSubmit={onSubmitComposer} />
           </div>
         ) : replying ? (
           <div className="mt-2">
@@ -284,6 +277,7 @@ function ThreadBlock({
           </div>
         ) : (
           <button
+            type="button"
             onClick={() => setReplying(true)}
             className="mt-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
           >
@@ -388,6 +382,7 @@ function CommentRow({
           <div className="ml-auto flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
             {canEdit && !editing && (
               <button
+                type="button"
                 aria-label="Edit"
                 onClick={() => setEditing(true)}
                 className="rounded p-1 text-muted-foreground hover:bg-muted"
@@ -397,6 +392,7 @@ function CommentRow({
             )}
             {canDelete && (
               <button
+                type="button"
                 aria-label="Delete"
                 onClick={() => {
                   if (confirm('Delete this comment?')) del.mutate();
@@ -423,16 +419,16 @@ function CommentRow({
           </div>
         ) : (
           <p className="mt-0.5 whitespace-pre-wrap break-words text-sm leading-relaxed">
-            {tokenizeCommentBody(comment.body).map((t, i) =>
+            {tokenizeCommentBody(comment.body).map((t) =>
               t.kind === 'mention' ? (
                 <span
-                  key={i}
+                  key={t.key}
                   className="rounded bg-blue-500/10 px-1 py-0.5 text-[12.5px] font-medium text-blue-600 dark:text-blue-400"
                 >
                   @{t.label}
                 </span>
               ) : (
-                <span key={i}>{t.text}</span>
+                <span key={t.key}>{t.text}</span>
               ),
             )}
           </p>

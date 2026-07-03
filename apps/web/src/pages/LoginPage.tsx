@@ -20,16 +20,16 @@ export function LoginPage() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          Sign in with Google to continue — NotDrive requests Drive access to list, preview, and link
-          your files.
+          Sign in with Google to continue — NotDrive requests Drive access to list, preview, and
+          link your files.
         </p>
 
         {error === 'domain_not_allowed' && (
           <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
             <div className="font-medium">Access restricted</div>
             <p className="mt-1 text-xs">
-              Your email domain{domain ? ` (${domain})` : ''} is not allowed to sign in. Contact
-              the admin, or use an account on an allowed domain.
+              Your email domain{domain ? ` (${domain})` : ''} is not allowed to sign in. Contact the
+              admin, or use an account on an allowed domain.
             </p>
           </div>
         )}

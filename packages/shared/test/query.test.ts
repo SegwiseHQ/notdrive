@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { QueryParseError, collectTerms, parseQuery, resolveModifiedToEpochMs } from '../src/query.js';
+import {
+  QueryParseError,
+  collectTerms,
+  parseQuery,
+  resolveModifiedToEpochMs,
+} from '../src/query.js';
 
 describe('parseQuery', () => {
   it('parses a mixed query', () => {

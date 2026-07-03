@@ -13,8 +13,9 @@ export function mapFileToNode(f: {
   mimeType?: string | null;
   modifiedTime?: string | null;
 }): DriveTreeNode {
+  if (!f.id) throw new Error('Drive file is missing id');
   return {
-    id: f.id!,
+    id: f.id,
     name: f.name ?? '(unnamed)',
     mime_type: f.mimeType ?? 'application/octet-stream',
     is_folder: f.mimeType === FOLDER_MIME,

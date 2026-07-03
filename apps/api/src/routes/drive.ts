@@ -1,3 +1,4 @@
+import { zValidator } from '@hono/zod-validator';
 import {
   driveCreateSchema,
   driveSearchQuerySchema,
@@ -6,17 +7,12 @@ import {
   permissionCreateSchema,
   permissionPatchSchema,
 } from '@notdrive/shared';
-import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { requireAuth } from '../middleware/auth.js';
-import { requireWorkspace } from '../middleware/workspace.js';
+import type { Variables } from '../context.js';
 import { fetchAndCacheDriveFile, getCachedFile } from '../drive/cache.js';
-import { fetchDriveTree } from '../drive/tree.js';
 import { syncChanges } from '../drive/changes.js';
 import { createDriveFile, isFolderMime } from '../drive/create.js';
 import { permanentlyDeleteDriveFile, trashDriveFile, untrashDriveFile } from '../drive/destroy.js';
-import { searchDrive } from '../drive/search.js';
-import { listTrashedDriveFiles } from '../drive/trash.js';
 import {
   addPermission,
   disableLinkSharing,
@@ -25,9 +21,13 @@ import {
   removePermission,
   updatePermission,
 } from '../drive/permissions.js';
+import { searchDrive } from '../drive/search.js';
+import { listTrashedDriveFiles } from '../drive/trash.js';
+import { fetchDriveTree } from '../drive/tree.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireWorkspace } from '../middleware/workspace.js';
 import { createItem, getItem } from '../services/items.js';
 import { notFound } from '../util/errors.js';
-import type { Variables } from '../context.js';
 
 const app = new Hono<{ Variables: Variables }>();
 app.use('*', requireAuth, requireWorkspace('viewer'));
@@ -114,9 +114,7 @@ app.patch(
   async (c) => {
     const user = c.get('user');
     const { role } = c.req.valid('json');
-    return c.json(
-      await updatePermission(user.id, c.req.param('id'), c.req.param('pid'), role),
-    );
+    return c.json(await updatePermission(user.id, c.req.param('id'), c.req.param('pid'), role));
   },
 );
 

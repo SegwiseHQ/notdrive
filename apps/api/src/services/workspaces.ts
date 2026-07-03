@@ -1,8 +1,8 @@
+import type { Role } from '@notdrive/shared';
 import { and, eq } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
-import { newId, now } from '../util/ids.js';
-import type { Role } from '@notdrive/shared';
 import { conflict, forbidden, notFound } from '../util/errors.js';
+import { newId, now } from '../util/ids.js';
 
 export async function createPersonalWorkspace(userId: string, userName: string) {
   const id = newId();
@@ -121,7 +121,9 @@ export async function updateMemberRole(
 
 export async function removeMember(workspaceId: string, actorId: string, targetUserId: string) {
   if (actorId === targetUserId) {
-    throw conflict("you can't remove yourself — another owner must do it, or use 'Leave workspace'");
+    throw conflict(
+      "you can't remove yourself — another owner must do it, or use 'Leave workspace'",
+    );
   }
   const res = await db
     .delete(schema.workspace_members)

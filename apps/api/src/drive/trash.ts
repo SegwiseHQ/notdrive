@@ -7,10 +7,7 @@ import { mapFileToNode } from './mappers.js';
  * List files in the user's Drive trash. Only files they own (otherwise
  * `restoreFromTrash` wouldn't work anyway).
  */
-export async function listTrashedDriveFiles(
-  userId: string,
-  limit = 100,
-): Promise<DriveTreeNode[]> {
+export async function listTrashedDriveFiles(userId: string, limit = 100): Promise<DriveTreeNode[]> {
   const drive = await driveClientFor(userId);
   const res = await withDriveLimit(userId, () =>
     drive.files.list({

@@ -1,10 +1,10 @@
 import { nanoid } from 'nanoid';
 import { logger } from '../util/logger.js';
-import { tryAcquire } from './lease.js';
-import { drivePollTick } from './drivePoll.js';
 import { archivePurgeTick } from './archivePurge.js';
-import { sessionGcTick } from './sessionGc.js';
+import { drivePollTick } from './drivePoll.js';
 import { inviteGcTick } from './inviteGc.js';
+import { tryAcquire } from './lease.js';
+import { sessionGcTick } from './sessionGc.js';
 
 interface Job {
   name: string;
@@ -15,7 +15,12 @@ interface Job {
 
 const JOBS: Job[] = [
   { name: 'drive-poll', intervalMs: 60_000, leaseTtlMs: 90_000, run: drivePollTick },
-  { name: 'archive-purge', intervalMs: 60 * 60 * 1000, leaseTtlMs: 5 * 60_000, run: archivePurgeTick },
+  {
+    name: 'archive-purge',
+    intervalMs: 60 * 60 * 1000,
+    leaseTtlMs: 5 * 60_000,
+    run: archivePurgeTick,
+  },
   { name: 'session-gc', intervalMs: 15 * 60 * 1000, leaseTtlMs: 5 * 60_000, run: sessionGcTick },
   { name: 'invite-gc', intervalMs: 60 * 60 * 1000, leaseTtlMs: 5 * 60_000, run: inviteGcTick },
 ];

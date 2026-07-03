@@ -33,7 +33,7 @@ export function TimelineView({ items }: { items: ItemDTO[] }) {
             {k}
           </h2>
           <ul className="flex flex-col divide-y divide-border">
-            {groups.get(k)!.map((it) => (
+            {groups.get(k)?.map((it) => (
               <li key={it.id}>
                 <Link to={`/w/${wsId}/i/${it.id}`} className="flex items-center gap-2 py-1.5">
                   <span className="min-w-0 flex-1 truncate text-sm">{it.title}</span>

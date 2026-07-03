@@ -20,7 +20,7 @@ import { apiOrigin } from './api.js';
 
 function resolveWorkspaceId(): string | null {
   const match = /\/w\/([^/?#]+)/.exec(window.location.pathname);
-  if (match && match[1]) return match[1];
+  if (match?.[1]) return match[1];
   return localStorage.getItem('notdrive.workspace_id');
 }
 
@@ -88,9 +88,16 @@ export const http = {
       body: JSON.stringify({ token }),
     }),
   members: (wsId: string) =>
-    req<Array<{ user_id: string; role: string; email: string; name: string; avatar_url: string | null; joined_at: number }>>(
-      `/workspaces/${wsId}/members`,
-    ),
+    req<
+      Array<{
+        user_id: string;
+        role: string;
+        email: string;
+        name: string;
+        avatar_url: string | null;
+        joined_at: number;
+      }>
+    >(`/workspaces/${wsId}/members`),
   patchMember: (wsId: string, uid: string, role: string) =>
     req<{ ok: true }>(`/workspaces/${wsId}/members/${uid}`, {
       method: 'PATCH',
@@ -107,12 +114,18 @@ export const http = {
     return req<ItemDTO[]>(`/items?${qs}`);
   },
   getItem: (id: string) => req<ItemDTO>(`/items/${id}`),
-  createItem: (body: { title: string; parent_id?: string | null; type?: 'page' | 'file'; drive_file_id?: string }) =>
-    req<ItemDTO>('/items', { method: 'POST', body: JSON.stringify(body) }),
+  createItem: (body: {
+    title: string;
+    parent_id?: string | null;
+    type?: 'page' | 'file';
+    drive_file_id?: string;
+  }) => req<ItemDTO>('/items', { method: 'POST', body: JSON.stringify(body) }),
   patchItem: (id: string, body: { title?: string; is_favorite?: boolean; body?: string | null }) =>
     req<ItemDTO>(`/items/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  moveItem: (id: string, body: { parent_id: string | null; before_id?: string; after_id?: string }) =>
-    req<ItemDTO>(`/items/${id}/move`, { method: 'PATCH', body: JSON.stringify(body) }),
+  moveItem: (
+    id: string,
+    body: { parent_id: string | null; before_id?: string; after_id?: string },
+  ) => req<ItemDTO>(`/items/${id}/move`, { method: 'PATCH', body: JSON.stringify(body) }),
   archiveItem: (id: string) => req<{ ok: true }>(`/items/${id}`, { method: 'DELETE' }),
   duplicateItem: (id: string) => req<ItemDTO>(`/items/${id}/duplicate`, { method: 'POST' }),
   purgeItem: (id: string) => req<{ ok: true }>(`/items/${id}?hard=1`, { method: 'DELETE' }),
@@ -146,7 +159,10 @@ export const http = {
   driveTree: (depth = 4) => req<DriveTreeNode>(`/drive/tree?depth=${depth}`),
   driveSearch: (q: string, limit = 50) =>
     req<DriveTreeNode[]>(`/drive/search?q=${encodeURIComponent(q)}&limit=${limit}`),
-  driveFile: (id: string) => req<{ drive_file_id: string; name: string; web_view_link: string | null }>(`/drive/files/${id}`),
+  driveFile: (id: string) =>
+    req<{ drive_file_id: string; name: string; web_view_link: string | null }>(
+      `/drive/files/${id}`,
+    ),
   driveSync: () => req<{ processed: number }>('/drive/sync', { method: 'POST' }),
   trashDriveFile: (fileId: string) =>
     req<{ ok: true; permanent: false }>(`/drive/files/${fileId}`, { method: 'DELETE' }),
@@ -264,10 +280,7 @@ export const http = {
 
   listComments: (itemId: string) =>
     req<{ threads: CommentThreadDTO[] }>(`/items/${encodeURIComponent(itemId)}/comments`),
-  createComment: (
-    itemId: string,
-    body: { body: string; anchor?: string; thread_id?: string },
-  ) =>
+  createComment: (itemId: string, body: { body: string; anchor?: string; thread_id?: string }) =>
     req<{ thread_id: string; comment_id: string; anchor: string | null }>(
       `/items/${encodeURIComponent(itemId)}/comments`,
       { method: 'POST', body: JSON.stringify(body) },

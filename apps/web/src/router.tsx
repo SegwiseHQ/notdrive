@@ -1,22 +1,22 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AppShell } from './AppShell.js';
-import { LoginPage } from './pages/LoginPage.js';
-import { WorkspacePicker } from './pages/WorkspacePicker.js';
-import { WorkspaceHome } from './pages/WorkspaceHome.js';
+import { AcceptInvitePage } from './pages/AcceptInvitePage.js';
+import { ArchivePage } from './pages/ArchivePage.js';
+import { DriveFilePage } from './pages/DriveFilePage.js';
+import { DrivePage } from './pages/DrivePage.js';
+import { DriveTrashPage } from './pages/DriveTrashPage.js';
+import { FavoritesPage } from './pages/FavoritesPage.js';
+import { ImportPage } from './pages/ImportPage.js';
 import { ItemPage } from './pages/ItemPage.js';
-import { ViewPage } from './pages/ViewPage.js';
+import { LoginPage } from './pages/LoginPage.js';
+import { MembersPage } from './pages/MembersPage.js';
+import { RecentPage } from './pages/RecentPage.js';
 import { TagPage } from './pages/TagPage.js';
 import { TagsIndexPage } from './pages/TagsIndexPage.js';
+import { ViewPage } from './pages/ViewPage.js';
 import { ViewsIndexPage } from './pages/ViewsIndexPage.js';
-import { DrivePage } from './pages/DrivePage.js';
-import { DriveFilePage } from './pages/DriveFilePage.js';
-import { DriveTrashPage } from './pages/DriveTrashPage.js';
-import { ArchivePage } from './pages/ArchivePage.js';
-import { FavoritesPage } from './pages/FavoritesPage.js';
-import { RecentPage } from './pages/RecentPage.js';
-import { MembersPage } from './pages/MembersPage.js';
-import { AcceptInvitePage } from './pages/AcceptInvitePage.js';
-import { ImportPage } from './pages/ImportPage.js';
+import { WorkspaceHome } from './pages/WorkspaceHome.js';
+import { WorkspacePicker } from './pages/WorkspacePicker.js';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },

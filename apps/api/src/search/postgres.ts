@@ -6,7 +6,8 @@ import type { Pool } from 'pg';
  * time — simpler than maintaining a materialized view in MVP.
  */
 export async function applyPostgresSearch(pool: Pool) {
-  await pool.query(`
+  await pool
+    .query(`
     -- Title-only column (legacy; kept for any code still referencing it).
     DO $$
     BEGIN
@@ -43,12 +44,15 @@ export async function applyPostgresSearch(pool: Pool) {
 
     CREATE INDEX IF NOT EXISTS drive_cache_name_trgm
       ON drive_file_cache USING GIN (name gin_trgm_ops);
-  `).catch(async () => {
-    // pg_trgm may not be installed; graceful fallback.
-    await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm').catch(() => {});
-    await pool.query(`
+  `)
+    .catch(async () => {
+      // pg_trgm may not be installed; graceful fallback.
+      await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm').catch(() => {});
+      await pool
+        .query(`
       CREATE INDEX IF NOT EXISTS drive_cache_name_trgm
         ON drive_file_cache USING GIN (name gin_trgm_ops)
-    `).catch(() => {});
-  });
+    `)
+        .catch(() => {});
+    });
 }

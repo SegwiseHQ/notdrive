@@ -1,11 +1,11 @@
-import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { CommentDTO, CommentThreadDTO, Role } from '@notdrive/shared';
 import { roleAtLeast } from '@notdrive/shared';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
-import { newId } from '../util/ids.js';
 import { forbidden, notFound } from '../util/errors.js';
-import { requireVisibleItem } from './items.js';
+import { newId } from '../util/ids.js';
 import { publishItemEvent } from './itemStream.js';
+import { requireVisibleItem } from './items.js';
 import { createNotification } from './notifications.js';
 
 /**
@@ -101,9 +101,7 @@ export async function listForItem(
     })
     .from(schema.comments)
     .leftJoin(schema.users, eq(schema.users.id, schema.comments.user_id))
-    .where(
-      and(inArray(schema.comments.thread_id, threadIds), isNull(schema.comments.deleted_at)),
-    )
+    .where(and(inArray(schema.comments.thread_id, threadIds), isNull(schema.comments.deleted_at)))
     .orderBy(asc(schema.comments.created_at));
 
   const byThread = new Map<string, CommentDTO[]>();

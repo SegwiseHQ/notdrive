@@ -1,8 +1,8 @@
 import { migrate as migrateSqlite } from 'drizzle-orm/better-sqlite3/migrator';
 import { migrate as migratePg } from 'drizzle-orm/node-postgres/migrator';
 import { env } from '../env.js';
-import { db, usePg, pgPool, sqliteClient } from './index.js';
 import { applySqliteSearch } from '../search/sqlite.js';
+import { db, pgPool, sqliteClient, usePg } from './index.js';
 
 async function main() {
   if (usePg) {

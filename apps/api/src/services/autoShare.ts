@@ -1,6 +1,6 @@
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
-import { addPermission, type DriveRole, listPermissions } from '../drive/permissions.js';
+import { type DriveRole, addPermission, listPermissions } from '../drive/permissions.js';
 import { logger } from '../util/logger.js';
 
 /**

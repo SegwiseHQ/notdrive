@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeAll } from 'vitest';
 import { randomBytes } from 'node:crypto';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 beforeAll(() => {
   process.env.APP_ENCRYPTION_KEY = randomBytes(32).toString('base64');
@@ -23,7 +23,7 @@ describe('secretbox', () => {
   it('tampering is detected', async () => {
     const { seal, open } = await import('../src/crypto/secretbox.js');
     const sealed = seal('secret');
-    const flipped = { ...sealed, ct: sealed.ct.slice(0, -4) + 'AAAA' };
+    const flipped = { ...sealed, ct: `${sealed.ct.slice(0, -4)}AAAA` };
     expect(() => open(flipped)).toThrow();
   });
 });

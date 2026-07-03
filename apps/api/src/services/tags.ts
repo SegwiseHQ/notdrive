@@ -20,7 +20,8 @@ export async function createTag(workspaceId: string, name: string, color: string
     return { id, workspace_id: workspaceId, name, color };
   } catch (e) {
     const msg = e instanceof Error ? e.message : '';
-    if (msg.includes('UNIQUE') || msg.includes('duplicate')) throw conflict('tag name already exists');
+    if (msg.includes('UNIQUE') || msg.includes('duplicate'))
+      throw conflict('tag name already exists');
     throw e;
   }
 }
@@ -32,13 +33,18 @@ export async function patchTag(
 ) {
   const res = await db
     .update(schema.tags)
-    .set({ ...(patch.name ? { name: patch.name } : {}), ...(patch.color ? { color: patch.color } : {}) })
+    .set({
+      ...(patch.name ? { name: patch.name } : {}),
+      ...(patch.color ? { color: patch.color } : {}),
+    })
     .where(and(eq(schema.tags.id, id), eq(schema.tags.workspace_id, workspaceId)));
   if (!res) throw notFound('tag not found');
 }
 
 export async function deleteTag(workspaceId: string, id: string) {
-  await db.delete(schema.tags).where(and(eq(schema.tags.id, id), eq(schema.tags.workspace_id, workspaceId)));
+  await db
+    .delete(schema.tags)
+    .where(and(eq(schema.tags.id, id), eq(schema.tags.workspace_id, workspaceId)));
 }
 
 export async function attachTag(workspaceId: string, itemId: string, tagId: string) {

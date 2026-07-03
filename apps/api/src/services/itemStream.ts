@@ -9,7 +9,7 @@
 import { logger } from '../util/logger.js';
 
 export type ItemEventKind =
-  | 'updated'    // body / title / visibility / favorite changed
+  | 'updated' // body / title / visibility / favorite changed
   | 'archived'
   | 'restored'
   | 'moved'
@@ -61,7 +61,7 @@ export function subscribeToItem(itemId: string, fn: Subscriber): () => void {
   }
   set.add(fn);
   return () => {
-    set!.delete(fn);
-    if (set!.size === 0) subscribers.delete(itemId);
+    set?.delete(fn);
+    if (set?.size === 0) subscribers.delete(itemId);
   };
 }

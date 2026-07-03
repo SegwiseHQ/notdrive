@@ -7,8 +7,9 @@ import {
   linkFileSchema,
 } from '@notdrive/shared';
 import { Hono } from 'hono';
+import type { Variables } from '../context.js';
 import { db, schema } from '../db/index.js';
-import { newId } from '../util/ids.js';
+import { fetchAndCacheDriveFile } from '../drive/cache.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
 import {
@@ -26,8 +27,7 @@ import {
   restoreItem,
   unlinkDriveFile,
 } from '../services/items.js';
-import { fetchAndCacheDriveFile } from '../drive/cache.js';
-import type { Variables } from '../context.js';
+import { newId } from '../util/ids.js';
 
 const app = new Hono<{ Variables: Variables }>();
 app.use('*', requireAuth, requireWorkspace('viewer'));
@@ -64,17 +64,12 @@ app.post('/', requireWorkspace('member'), zValidator('json', itemCreateSchema), 
   return c.json(await getItem(m.workspace_id, user.id, id), 201);
 });
 
-app.patch(
-  '/:id',
-  requireWorkspace('member'),
-  zValidator('json', itemPatchSchema),
-  async (c) => {
-    const m = c.get('membership');
-    const user = c.get('user');
-    await patchItem(m.workspace_id, user.id, c.req.param('id'), c.req.valid('json'));
-    return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
-  },
-);
+app.patch('/:id', requireWorkspace('member'), zValidator('json', itemPatchSchema), async (c) => {
+  const m = c.get('membership');
+  const user = c.get('user');
+  await patchItem(m.workspace_id, user.id, c.req.param('id'), c.req.valid('json'));
+  return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
+});
 
 app.patch(
   '/:id/move',
@@ -121,19 +116,14 @@ app.post('/:id/restore', requireWorkspace('member'), async (c) => {
   return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
 });
 
-app.post(
-  '/:id/link',
-  requireWorkspace('member'),
-  zValidator('json', linkFileSchema),
-  async (c) => {
-    const m = c.get('membership');
-    const user = c.get('user');
-    const { drive_file_id } = c.req.valid('json');
-    await linkDriveFile(m.workspace_id, user.id, c.req.param('id'), drive_file_id);
-    await fetchAndCacheDriveFile(m.workspace_id, user.id, drive_file_id).catch(() => {});
-    return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
-  },
-);
+app.post('/:id/link', requireWorkspace('member'), zValidator('json', linkFileSchema), async (c) => {
+  const m = c.get('membership');
+  const user = c.get('user');
+  const { drive_file_id } = c.req.valid('json');
+  await linkDriveFile(m.workspace_id, user.id, c.req.param('id'), drive_file_id);
+  await fetchAndCacheDriveFile(m.workspace_id, user.id, drive_file_id).catch(() => {});
+  return c.json(await getItem(m.workspace_id, user.id, c.req.param('id')));
+});
 
 app.delete('/:id/link', requireWorkspace('member'), async (c) => {
   const m = c.get('membership');
@@ -180,7 +170,10 @@ app.post('/:id/assets', requireWorkspace('member'), async (c) => {
   }
   const contentType = file.type || 'application/octet-stream';
   if (!ALLOWED_UPLOAD_TYPES.has(contentType)) {
-    return c.json({ error: 'bad_request', message: `unsupported content-type: ${contentType}` }, 400);
+    return c.json(
+      { error: 'bad_request', message: `unsupported content-type: ${contentType}` },
+      400,
+    );
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());

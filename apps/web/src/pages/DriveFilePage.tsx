@@ -30,13 +30,16 @@ export function DriveFilePage() {
     <div className="mx-auto flex min-h-0 w-full flex-1 flex-col px-8 py-8">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80">Drive file</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80">
+            Drive file
+          </div>
           <h1 className="mt-1 truncate text-3xl font-semibold tracking-tight">
             {file?.name ?? 'Loading…'}
           </h1>
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setShareOpen(true)}
             className="flex items-center gap-1 rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background hover:opacity-90"
           >
@@ -54,7 +57,10 @@ export function DriveFilePage() {
           )}
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-              <button className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted">
+              <button
+                type="button"
+                className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+              >
                 <MoreHorizontal className="size-4" />
               </button>
             </DropdownMenu.Trigger>
@@ -66,8 +72,7 @@ export function DriveFilePage() {
                 <DropdownMenu.Item
                   className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
                   onSelect={async () => {
-                    if (!confirm('Move this Drive file to trash? Recoverable for 30 days.'))
-                      return;
+                    if (!confirm('Move this Drive file to trash? Recoverable for 30 days.')) return;
                     try {
                       await http.trashDriveFile(fileId);
                       toast.success('Moved to Drive trash');

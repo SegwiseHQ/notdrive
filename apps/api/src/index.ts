@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server';
 import { buildApp } from './app.js';
-import { sqliteClient, pgPool } from './db/index.js';
+import { pgPool, sqliteClient } from './db/index.js';
 import { env, loadServerEnv } from './env.js';
 import { startJobRunner } from './jobs/runner.js';
 import { logger } from './util/logger.js';

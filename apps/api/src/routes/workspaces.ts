@@ -7,8 +7,10 @@ import {
   workspacePatchSchema,
 } from '@notdrive/shared';
 import { Hono } from 'hono';
+import type { Variables } from '../context.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
+import { acceptInvite, createInvite } from '../services/invites.js';
 import {
   createWorkspace,
   listMembers,
@@ -17,8 +19,6 @@ import {
   updateMemberRole,
   updateWorkspace,
 } from '../services/workspaces.js';
-import { acceptInvite, createInvite } from '../services/invites.js';
-import type { Variables } from '../context.js';
 
 const app = new Hono<{ Variables: Variables }>();
 app.use('*', requireAuth);
@@ -56,12 +56,17 @@ scoped.patch(
   },
 );
 
-scoped.post('/:wsId/invites', requireWorkspace('admin'), zValidator('json', inviteCreateSchema), async (c) => {
-  const m = c.get('membership');
-  const user = c.get('user');
-  const body = c.req.valid('json');
-  return c.json(await createInvite(m.workspace_id, user.id, body.email, body.role));
-});
+scoped.post(
+  '/:wsId/invites',
+  requireWorkspace('admin'),
+  zValidator('json', inviteCreateSchema),
+  async (c) => {
+    const m = c.get('membership');
+    const user = c.get('user');
+    const body = c.req.valid('json');
+    return c.json(await createInvite(m.workspace_id, user.id, body.email, body.role));
+  },
+);
 
 scoped.patch(
   '/:wsId/members/:uid',
