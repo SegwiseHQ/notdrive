@@ -1,5 +1,8 @@
-import { BubbleMenu, type Editor } from '@tiptap/react';
+import type { Editor } from '@tiptap/react';
 import { Bold, Code, Italic, MessageSquarePlus, Strikethrough } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import tippy, { type Instance as TippyInstance } from 'tippy.js';
 
 interface Props {
   editor: Editor | null;
@@ -20,33 +23,114 @@ interface Props {
  * without memorising the shortcuts.
  */
 export function BubbleToolbar({ editor, onComment }: Props) {
-  if (!editor) return null;
+  const onCommentRef = useRef(onComment);
+  onCommentRef.current = onComment;
 
-  const triggerComment = () => {
-    const { from, to } = editor.state.selection;
-    if (from === to) return;
-    // .textBetween joins block boundaries with a separator — use a single
-    // space so paragraph breaks inside the selection become readable
-    // anchor previews instead of slamming words together.
-    const text = editor.state.doc.textBetween(from, to, ' ');
-    if (!text.trim()) return;
-    onComment?.({ from, to, text });
-  };
+  useEffect(() => {
+    if (!editor) return;
 
+    const element = document.createElement('div');
+    const root = createRoot(element);
+    let popup: TippyInstance | null = null;
+    let disposed = false;
+
+    const shouldShow = () => {
+      if (editor.isDestroyed) return false;
+      if (!editor.isFocused) return false;
+      const { from, to } = editor.state.selection;
+      if (from === to) return false;
+      if (editor.isActive('image')) return false;
+      if (editor.isActive('horizontalRule')) return false;
+      return true;
+    };
+
+    const getSelectionRect = () => {
+      if (editor.isDestroyed) return editor.view.dom.getBoundingClientRect();
+      const { from, to } = editor.state.selection;
+      const start = editor.view.coordsAtPos(from);
+      const end = editor.view.coordsAtPos(to);
+      const left = Math.min(start.left, end.left);
+      const right = Math.max(start.right, end.right);
+      const top = Math.min(start.top, end.top);
+      const bottom = Math.max(start.bottom, end.bottom);
+      return new DOMRect(left, top, right - left, bottom - top);
+    };
+
+    const triggerComment = () => {
+      const { from, to } = editor.state.selection;
+      if (from === to) return;
+      // .textBetween joins block boundaries with a separator — use a single
+      // space so paragraph breaks inside the selection become readable
+      // anchor previews instead of slamming words together.
+      const text = editor.state.doc.textBetween(from, to, ' ');
+      if (!text.trim()) return;
+      onCommentRef.current?.({ from, to, text });
+    };
+
+    const render = () => {
+      root.render(
+        <ToolbarContent
+          editor={editor}
+          onComment={onCommentRef.current ? triggerComment : undefined}
+        />,
+      );
+    };
+
+    const update = () => {
+      if (disposed || !popup) return;
+      render();
+      if (!shouldShow()) {
+        popup.hide();
+        return;
+      }
+      popup.setProps({ getReferenceClientRect: getSelectionRect });
+      popup.show();
+    };
+
+    popup = tippy(editor.view.dom, {
+      getReferenceClientRect: getSelectionRect,
+      appendTo: () => document.body,
+      content: element,
+      duration: 100,
+      interactive: true,
+      placement: 'top',
+      trigger: 'manual',
+    });
+
+    render();
+    editor.on('selectionUpdate', update);
+    editor.on('transaction', update);
+    editor.on('focus', update);
+    editor.on('blur', update);
+    update();
+
+    return () => {
+      disposed = true;
+      editor.off('selectionUpdate', update);
+      editor.off('transaction', update);
+      editor.off('focus', update);
+      editor.off('blur', update);
+      // Unmount React while tippy still owns the content element. Destroying
+      // tippy first can detach/move DOM that React still believes it owns,
+      // which is the removeChild crash seen during page navigation.
+      root.unmount();
+      popup?.destroy();
+      element.remove();
+    };
+  }, [editor]);
+
+  return null;
+}
+
+function ToolbarContent({
+  editor,
+  onComment,
+}: {
+  editor: Editor;
+  onComment?: () => void;
+}) {
   return (
-    <BubbleMenu
-      editor={editor}
-      tippyOptions={{ duration: 100, placement: 'top' }}
-      // Don't render the toolbar over empty selections (caret with no range)
-      // or over images / horizontal rules where text formatting is meaningless.
-      shouldShow={({ editor, from, to }) => {
-        if (from === to) return false;
-        if (editor.isActive('image')) return false;
-        if (editor.isActive('horizontalRule')) return false;
-        return true;
-      }}
-      className="flex items-center gap-0.5 rounded-md border border-border bg-card p-0.5 shadow-md"
-    >
+    <div className="flex items-center gap-0.5 rounded-md border border-border bg-card p-0.5 shadow-md">
       <ToolbarButton
         active={editor.isActive('bold')}
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -78,12 +162,12 @@ export function BubbleToolbar({ editor, onComment }: Props) {
       {onComment && (
         <>
           <span className="mx-0.5 h-4 w-px bg-border" aria-hidden />
-          <ToolbarButton active={false} onClick={triggerComment} title="Comment">
+          <ToolbarButton active={false} onClick={onComment} title="Comment">
             <MessageSquarePlus className="size-3.5" />
           </ToolbarButton>
         </>
       )}
-    </BubbleMenu>
+    </div>
   );
 }
 
@@ -101,10 +185,13 @@ function ToolbarButton({
   return (
     <button
       type="button"
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       title={title}
       className={`flex size-7 items-center justify-center rounded transition ${
-        active ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        active
+          ? 'bg-muted text-foreground'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
       }`}
     >
       {children}

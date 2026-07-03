@@ -1,8 +1,8 @@
-import { Extension, type Editor, type Range } from '@tiptap/core';
+import { type Editor, Extension, type Range } from '@tiptap/core';
 import { ReactRenderer } from '@tiptap/react';
 import Suggestion, { type SuggestionOptions } from '@tiptap/suggestion';
 import tippy, { type Instance as TippyInstance } from 'tippy.js';
-import { SlashMenu, SLASH_ITEMS, type SlashItem } from './SlashMenu.js';
+import { SLASH_ITEMS, type SlashItem, SlashMenu } from './SlashMenu.js';
 
 type SuggestionProps = {
   editor: Editor;
@@ -13,11 +13,16 @@ type SuggestionProps = {
   clientRect?: (() => DOMRect | null) | null;
 };
 
+type SlashCommandOptions = {
+  itemId?: string;
+  suggestion: Partial<SuggestionOptions<SlashItem>>;
+};
+
 // Holds the current SlashCommand options so the static suggestion config
 // (built once at addOptions time) can read fresh option values like itemId.
 const extOpts: { itemId?: string } = {};
 
-export const SlashCommand = Extension.create<{ itemId?: string }>({
+export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slashCommand',
 
   addOptions() {
@@ -54,16 +59,23 @@ export const SlashCommand = Extension.create<{ itemId?: string }>({
           ).slice(0, 10);
         },
         render: () => {
-          let component: ReactRenderer<{ onKeyDown: (e: KeyboardEvent) => boolean }, SuggestionProps> | null = null;
+          let component: ReactRenderer<
+            { onKeyDown: (e: KeyboardEvent) => boolean },
+            SuggestionProps
+          > | null = null;
           let popup: TippyInstance[] | null = null;
           return {
             onStart: (props) => {
-              component = new ReactRenderer(SlashMenu, { props, editor: props.editor });
+              const renderer = new ReactRenderer<
+                { onKeyDown: (e: KeyboardEvent) => boolean },
+                SuggestionProps
+              >(SlashMenu, { props, editor: props.editor });
+              component = renderer;
               if (!props.clientRect) return;
               popup = tippy('body', {
                 getReferenceClientRect: props.clientRect as () => DOMRect,
                 appendTo: () => document.body,
-                content: component.element,
+                content: renderer.element,
                 showOnCreate: true,
                 interactive: true,
                 trigger: 'manual',
@@ -83,8 +95,13 @@ export const SlashCommand = Extension.create<{ itemId?: string }>({
               return component?.ref?.onKeyDown(props.event) ?? false;
             },
             onExit: () => {
-              popup?.[0]?.destroy();
+              // Unmount React before tippy detaches its content element.
+              // Destroying the popper first can make React's later cleanup
+              // trip over a DOM node that no longer has the expected parent.
               component?.destroy();
+              popup?.[0]?.destroy();
+              component = null;
+              popup = null;
             },
           };
         },
