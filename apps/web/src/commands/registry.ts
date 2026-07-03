@@ -1,8 +1,8 @@
-import type { NavigateFunction } from 'react-router-dom';
-import type { QueryClient } from '@tanstack/react-query';
-import { http } from '../lib/http.js';
-import { useSelection, useUi } from '../lib/store.js';
 import type { DarkMode } from '@notdrive/shared';
+import type { QueryClient } from '@tanstack/react-query';
+import type { NavigateFunction } from 'react-router-dom';
+import { http } from '../lib/http.js';
+import { useSelection } from '../lib/store.js';
 
 export interface CommandContext {
   wsId: string;
@@ -133,14 +133,21 @@ export const COMMANDS: Command[] = [
       c.qc.invalidateQueries();
     },
   },
-  ...([
-    ['doc', 'Google Doc', 'application/vnd.google-apps.document', 'Untitled document'],
-    ['sheet', 'Google Sheet', 'application/vnd.google-apps.spreadsheet', 'Untitled spreadsheet'],
-    ['slides', 'Google Slides', 'application/vnd.google-apps.presentation', 'Untitled presentation'],
-    ['drawing', 'Google Drawing', 'application/vnd.google-apps.drawing', 'Untitled drawing'],
-    ['form', 'Google Form', 'application/vnd.google-apps.form', 'Untitled form'],
-    ['folder', 'Folder', 'application/vnd.google-apps.folder', 'Untitled folder'],
-  ] as const).map(([slug, label, mime, defaultName]) => ({
+  ...(
+    [
+      ['doc', 'Google Doc', 'application/vnd.google-apps.document', 'Untitled document'],
+      ['sheet', 'Google Sheet', 'application/vnd.google-apps.spreadsheet', 'Untitled spreadsheet'],
+      [
+        'slides',
+        'Google Slides',
+        'application/vnd.google-apps.presentation',
+        'Untitled presentation',
+      ],
+      ['drawing', 'Google Drawing', 'application/vnd.google-apps.drawing', 'Untitled drawing'],
+      ['form', 'Google Form', 'application/vnd.google-apps.form', 'Untitled form'],
+      ['folder', 'Folder', 'application/vnd.google-apps.folder', 'Untitled folder'],
+    ] as const
+  ).map(([slug, label, mime, defaultName]) => ({
     id: `drive.create.${slug}`,
     title: `New ${label}`,
     section: 'Drive',
@@ -213,5 +220,5 @@ export function onLayoutChange(fn: Listener) {
   return () => layoutBus.delete(fn);
 }
 function emitViewChange(l: 'list' | 'grid' | 'timeline' | 'tagboard') {
-  layoutBus.forEach((fn) => fn(l));
+  for (const fn of layoutBus) fn(l);
 }

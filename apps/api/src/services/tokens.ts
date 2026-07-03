@@ -1,7 +1,7 @@
-import type { Credentials } from 'google-auth-library';
 import { and, eq } from 'drizzle-orm';
-import { db, schema } from '../db/index.js';
+import type { Credentials } from 'google-auth-library';
 import { open, seal } from '../crypto/secretbox.js';
+import { db, schema } from '../db/index.js';
 import { now } from '../util/ids.js';
 
 export async function saveGoogleTokens(userId: string, t: Credentials, scope: string) {
@@ -41,7 +41,9 @@ export async function loadGoogleTokens(userId: string) {
   const row = await db
     .select()
     .from(schema.oauth_accounts)
-    .where(and(eq(schema.oauth_accounts.user_id, userId), eq(schema.oauth_accounts.provider, 'google')))
+    .where(
+      and(eq(schema.oauth_accounts.user_id, userId), eq(schema.oauth_accounts.provider, 'google')),
+    )
     .limit(1);
   const r = row[0];
   if (!r) return null;
@@ -60,7 +62,12 @@ export async function updateAccessToken(userId: string, accessToken: string, exp
   const at = seal(accessToken);
   await db
     .update(schema.oauth_accounts)
-    .set({ access_token_ct: at.ct, access_token_iv: at.iv, expires_at: expiresAt, updated_at: now() })
+    .set({
+      access_token_ct: at.ct,
+      access_token_iv: at.iv,
+      expires_at: expiresAt,
+      updated_at: now(),
+    })
     .where(
       and(eq(schema.oauth_accounts.user_id, userId), eq(schema.oauth_accounts.provider, 'google')),
     );

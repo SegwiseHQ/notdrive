@@ -1,8 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TAG_COLORS } from '@notdrive/shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { http } from '../../lib/http.js';
 
 const colorClass: Record<string, string> = {
@@ -62,6 +62,7 @@ export function TagList({ wsId }: { wsId: string }) {
           className="min-w-0 flex-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs"
         />
         <button
+          type="button"
           onClick={() => name && create.mutate()}
           className="rounded-md p-0.5 text-muted-foreground hover:bg-accent"
         >

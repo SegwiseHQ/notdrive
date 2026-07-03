@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
+import type { Variables } from '../context.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
-import { getItem } from '../services/items.js';
 import { subscribeToItem } from '../services/itemStream.js';
-import type { Variables } from '../context.js';
+import { getItem } from '../services/items.js';
 
 const app = new Hono<{ Variables: Variables }>();
 app.use('*', requireAuth, requireWorkspace('viewer'));

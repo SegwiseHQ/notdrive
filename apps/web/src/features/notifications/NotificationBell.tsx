@@ -1,5 +1,5 @@
-import * as Popover from '@radix-ui/react-popover';
 import type { NotificationDTO } from '@notdrive/shared';
+import * as Popover from '@radix-ui/react-popover';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell } from 'lucide-react';
 import { useState } from 'react';
@@ -58,6 +58,7 @@ export function NotificationBell({ wsId }: Props) {
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <button
+          type="button"
           aria-label="Notifications"
           className="relative rounded-md p-1 text-muted-foreground transition hover:bg-muted"
         >
@@ -79,6 +80,7 @@ export function NotificationBell({ wsId }: Props) {
             <span className="text-sm font-semibold">Notifications</span>
             {unread > 0 && (
               <button
+                type="button"
                 onClick={() => markAllRead.mutate()}
                 className="text-[11px] text-muted-foreground hover:text-foreground"
               >
@@ -99,6 +101,7 @@ export function NotificationBell({ wsId }: Props) {
               {notifications.map((n) => (
                 <li key={n.id}>
                   <button
+                    type="button"
                     onClick={() => onClickNotification(n)}
                     className={cn(
                       'flex w-full items-start gap-2 px-3 py-2 text-left transition hover:bg-muted',

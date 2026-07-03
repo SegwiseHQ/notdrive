@@ -1,10 +1,10 @@
 import { zValidator } from '@hono/zod-validator';
 import { commentPatchSchema } from '@notdrive/shared';
 import { Hono } from 'hono';
+import type { Variables } from '../context.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
 import { deleteComment, editComment } from '../services/comments.js';
-import type { Variables } from '../context.js';
 
 // Mutations addressed by comment id. Split out so the items router can stay
 // focused on `/items/:id/comments` (list + create), while edits and deletes

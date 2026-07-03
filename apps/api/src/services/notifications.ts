@@ -1,5 +1,9 @@
+import type {
+  NotificationDTO,
+  NotificationKind,
+  NotificationListResponseDTO,
+} from '@notdrive/shared';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import type { NotificationDTO, NotificationKind, NotificationListResponseDTO } from '@notdrive/shared';
 import { db, schema } from '../db/index.js';
 import { newId } from '../util/ids.js';
 import { logger } from '../util/logger.js';
@@ -73,7 +77,12 @@ export async function listForUser(
     .leftJoin(schema.users, eq(schema.users.id, schema.notifications.actor_id))
     .leftJoin(schema.items, eq(schema.items.id, schema.notifications.item_id))
     .leftJoin(schema.comments, eq(schema.comments.id, schema.notifications.comment_id))
-    .where(and(eq(schema.notifications.workspace_id, workspaceId), eq(schema.notifications.user_id, userId)))
+    .where(
+      and(
+        eq(schema.notifications.workspace_id, workspaceId),
+        eq(schema.notifications.user_id, userId),
+      ),
+    )
     .orderBy(desc(schema.notifications.created_at))
     .limit(limit);
 

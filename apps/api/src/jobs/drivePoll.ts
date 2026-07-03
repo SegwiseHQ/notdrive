@@ -1,8 +1,8 @@
-import { and, gt } from 'drizzle-orm';
+import { gt } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import { syncChanges } from '../drive/changes.js';
-import { logger } from '../util/logger.js';
 import { now } from '../util/ids.js';
+import { logger } from '../util/logger.js';
 
 const ACTIVE_WINDOW_MS = 2 * 60 * 1000;
 
@@ -37,9 +37,11 @@ export async function drivePollTick() {
       }
       count++;
     } catch (err) {
-      logger.warn({ err: (err as Error).message, ws: r.workspace_id, user: r.user_id }, 'drive-poll failed');
+      logger.warn(
+        { err: (err as Error).message, ws: r.workspace_id, user: r.user_id },
+        'drive-poll failed',
+      );
     }
   }
   return { pairs: count };
-  void and;
 }

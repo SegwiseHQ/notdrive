@@ -41,8 +41,7 @@ export const CommentMark = Mark.create({
       threadId: {
         default: null,
         parseHTML: (el) => el.getAttribute('data-thread-id'),
-        renderHTML: (attrs) =>
-          attrs.threadId ? { 'data-thread-id': attrs.threadId } : {},
+        renderHTML: (attrs) => (attrs.threadId ? { 'data-thread-id': attrs.threadId } : {}),
       },
     };
   },

@@ -1,4 +1,3 @@
-import type { ItemDTO } from '@notdrive/shared';
 import {
   DndContext,
   type DragEndEvent,
@@ -7,15 +6,22 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { ItemDTO } from '@notdrive/shared';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ChevronRight, Copy, File, FileText, Lock, MoreHorizontal, Plus, Star } from 'lucide-react';
+import {
+  Archive,
+  ChevronRight,
+  Copy,
+  File,
+  FileText,
+  Lock,
+  MoreHorizontal,
+  Plus,
+  Star,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -50,7 +56,8 @@ export function TreePanel({ wsId }: { wsId: string }) {
     qc.invalidateQueries({ queryKey: ['items', wsId] });
   };
 
-  if (rootQuery.isLoading) return <div className="px-2 py-1 text-xs text-muted-foreground">Loading…</div>;
+  if (rootQuery.isLoading)
+    return <div className="px-2 py-1 text-xs text-muted-foreground">Loading…</div>;
   const items = sortByTitle(rootQuery.data ?? []);
   if (items.length === 0)
     return <div className="px-2 py-1 text-xs text-muted-foreground">No pages yet</div>;
@@ -105,12 +112,17 @@ function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
   };
 
   return (
-    <div ref={sortable.setNodeRef} style={style} className={cn(sortable.isDragging && 'opacity-50')}>
+    <div
+      ref={sortable.setNodeRef}
+      style={style}
+      className={cn(sortable.isDragging && 'opacity-50')}
+    >
       <div
         className="group flex items-center gap-0.5 rounded-md py-[3px] pr-1 text-[13px] transition hover:bg-muted/70"
         style={{ paddingLeft: depth * 14 + 2 }}
       >
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
           className="flex size-4 items-center justify-center rounded text-muted-foreground/60 hover:text-foreground"
         >
@@ -130,12 +142,11 @@ function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
         >
           {item.title || 'Untitled'}
         </Link>
-        {item.visibility === 'private' && (
-          <Lock className="size-3 shrink-0 text-amber-500" />
-        )}
+        {item.visibility === 'private' && <Lock className="size-3 shrink-0 text-amber-500" />}
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -172,7 +183,9 @@ function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
                 }}
                 className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
               >
-                <Star className={`size-3.5 ${item.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+                <Star
+                  className={`size-3.5 ${item.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`}
+                />
                 {item.is_favorite ? 'Unstar' : 'Star'}
               </DropdownMenu.Item>
               <DropdownMenu.Item
@@ -212,18 +225,23 @@ function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
-      {expanded && childrenQuery.data && (() => {
-        const sortedChildren = sortByTitle(childrenQuery.data);
-        return (
-          <SortableContext items={sortedChildren.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-            {sortedChildren.map((c) => (
-              <TreeRow key={c.id} item={c} depth={depth + 1} />
-            ))}
-          </SortableContext>
-        );
-      })()}
+      {expanded &&
+        childrenQuery.data &&
+        (() => {
+          const sortedChildren = sortByTitle(childrenQuery.data);
+          return (
+            <SortableContext
+              items={sortedChildren.map((c) => c.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {sortedChildren.map((c) => (
+                <TreeRow key={c.id} item={c} depth={depth + 1} />
+              ))}
+            </SortableContext>
+          );
+        })()}
     </div>
   );
 }
 
-export { type DragOverEvent };
+export type { DragOverEvent };

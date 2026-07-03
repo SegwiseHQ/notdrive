@@ -24,8 +24,8 @@ import { PageShareDialog } from '../features/share/PageShareDialog.js';
 import { ShareDialog } from '../features/share/ShareDialog.js';
 import { TagEditor } from '../features/tags/TagEditor.js';
 import { apiOrigin } from '../lib/api.js';
-import { useNavigateToParent } from '../lib/nav.js';
 import { http } from '../lib/http.js';
+import { useNavigateToParent } from '../lib/nav.js';
 import { useSelection } from '../lib/store.js';
 
 export function ItemPage() {
@@ -50,9 +50,11 @@ export function ItemPage() {
   // the comments drawer renders a "pending inline" composer. On submit we
   // create the thread server-side, then apply the comment mark to the
   // captured range via the editor's imperative API.
-  const [pendingInline, setPendingInline] = useState<
-    { from: number; to: number; text: string } | null
-  >(null);
+  const [pendingInline, setPendingInline] = useState<{
+    from: number;
+    to: number;
+    text: string;
+  } | null>(null);
   // Thread to scroll to in the drawer when the user clicks an inline
   // highlight in the editor.
   const [focusThreadId, setFocusThreadId] = useState<string | null>(null);
@@ -167,9 +169,10 @@ export function ItemPage() {
   }));
 
   const [title, setTitle] = useState('');
+  const loadedTitle = itemQuery.data?.title;
   useEffect(() => {
-    if (itemQuery.data) setTitle(itemQuery.data.title);
-  }, [itemQuery.data?.id]);
+    if (loadedTitle !== undefined) setTitle(loadedTitle);
+  }, [loadedTitle]);
 
   const saveSeq = useRef(0);
   const patch = useMutation({
@@ -210,7 +213,8 @@ export function ItemPage() {
     },
   });
 
-  if (itemQuery.isLoading) return <div className="p-12 text-sm text-muted-foreground">Loading…</div>;
+  if (itemQuery.isLoading)
+    return <div className="p-12 text-sm text-muted-foreground">Loading…</div>;
   if (itemQuery.isError || !itemQuery.data) {
     return (
       <div className="mx-auto flex max-w-[640px] flex-col items-center gap-3 p-12 text-center text-sm">
@@ -219,6 +223,7 @@ export function ItemPage() {
           It may have been archived or deleted. Return home and check the tree.
         </p>
         <button
+          type="button"
           onClick={() => navigate(`/w/${wsId}`)}
           className="mt-2 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background"
         >
@@ -239,6 +244,7 @@ export function ItemPage() {
             {/* Don't auto-reload — the local editor may have unsaved typing. */}
           </span>
           <button
+            type="button"
             onClick={async () => {
               // Refetch, then imperatively replace title + body in place.
               // Remounting the editor (the previous approach) raced with
@@ -272,6 +278,7 @@ export function ItemPage() {
           </span>
         )}
         <button
+          type="button"
           className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
           onClick={() =>
             patch.mutate({
@@ -291,6 +298,7 @@ export function ItemPage() {
           )}
         </button>
         <button
+          type="button"
           className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
           onClick={() => patch.mutate({ is_favorite: !item.is_favorite })}
           title={item.is_favorite ? 'Unstar' : 'Star'}
@@ -298,6 +306,7 @@ export function ItemPage() {
           <Star className={`size-4 ${item.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
         </button>
         <button
+          type="button"
           className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
           onClick={() => setCommentsOpen(true)}
           title="Comments"
@@ -305,6 +314,7 @@ export function ItemPage() {
           <MessageSquare className="size-4" />
         </button>
         <button
+          type="button"
           onClick={() => setShareOpen(true)}
           className="flex items-center gap-1 rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background hover:opacity-90"
         >
@@ -312,7 +322,10 @@ export function ItemPage() {
         </button>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
-            <button className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted">
+            <button
+              type="button"
+              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+            >
               <MoreHorizontal className="size-4" />
             </button>
           </DropdownMenu.Trigger>
@@ -347,7 +360,10 @@ export function ItemPage() {
               {item.drive?.web_view_link && (
                 <DropdownMenu.Item
                   className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
-                  onSelect={() => window.open(item.drive!.web_view_link!, '_blank')}
+                  onSelect={() => {
+                    const url = item.drive?.web_view_link;
+                    if (url) window.open(url, '_blank');
+                  }}
                 >
                   <ExternalLink className="size-3.5" /> Open in Drive
                 </DropdownMenu.Item>
@@ -364,7 +380,8 @@ export function ItemPage() {
                   <DropdownMenu.Item
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
                     onSelect={async () => {
-                      if (!confirm('Move this Drive file to trash? Recoverable for 30 days.')) return;
+                      if (!confirm('Move this Drive file to trash? Recoverable for 30 days.'))
+                        return;
                       try {
                         await http.trashDriveFile(driveId);
                         await http.driveSync();
@@ -490,6 +507,7 @@ export function ItemPage() {
           <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground/80">
             <span>Inside</span>
             <button
+              type="button"
               onClick={async () => {
                 const sub = await http.createItem({ title: 'Untitled', parent_id: item.id });
                 qc.invalidateQueries({ queryKey: ['items', wsId, item.id] });
@@ -514,21 +532,22 @@ export function ItemPage() {
                 }),
               )
               .map((c) => (
-              <li key={c.id}>
-                <button
-                  onClick={() => navigate(`/w/${wsId}/i/${c.id}`)}
-                  className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-muted"
-                >
-                  <span className="text-muted-foreground">
-                    {c.type === 'file' ? '📎' : '📄'}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{c.title || 'Untitled'}</span>
-                  {c.drive?.mime_type && (
-                    <span className="truncate text-xs text-muted-foreground">{c.drive.mime_type.split('.').pop()}</span>
-                  )}
-                </button>
-              </li>
-            ))}
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/w/${wsId}/i/${c.id}`)}
+                    className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-muted"
+                  >
+                    <span className="text-muted-foreground">{c.type === 'file' ? '📎' : '📄'}</span>
+                    <span className="min-w-0 flex-1 truncate">{c.title || 'Untitled'}</span>
+                    {c.drive?.mime_type && (
+                      <span className="truncate text-xs text-muted-foreground">
+                        {c.drive.mime_type.split('.').pop()}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
           </ul>
         </section>
       )}
@@ -538,6 +557,7 @@ export function ItemPage() {
           <p>This page is empty.</p>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={async () => {
                 const sub = await http.createItem({ title: 'Untitled', parent_id: item.id });
                 qc.invalidateQueries({ queryKey: ['items', wsId, item.id] });
@@ -549,6 +569,7 @@ export function ItemPage() {
               + New sub-page
             </button>
             <button
+              type="button"
               onClick={() => setParams({ pick: '1' })}
               className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
             >

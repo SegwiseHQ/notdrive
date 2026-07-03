@@ -36,12 +36,12 @@ export function PageShareDialog({
             <div className="min-w-0">
               <Dialog.Title className="text-sm font-semibold">Share this page</Dialog.Title>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Anyone you've invited to NotDrive can already open this page. Others need an
-                invite first.
+                Anyone you've invited to NotDrive can already open this page. Others need an invite
+                first.
               </p>
             </div>
             <Dialog.Close asChild>
-              <button className="rounded-md p-1 text-muted-foreground hover:bg-muted">
+              <button type="button" className="rounded-md p-1 text-muted-foreground hover:bg-muted">
                 <X className="size-4" />
               </button>
             </Dialog.Close>
@@ -59,6 +59,7 @@ export function PageShareDialog({
                 className="flex-1 truncate rounded-md border border-border bg-background px-2 py-1 font-mono text-xs"
               />
               <button
+                type="button"
                 onClick={copyUrl}
                 className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
               >
@@ -79,6 +80,7 @@ export function PageShareDialog({
               </div>
             </div>
             <button
+              type="button"
               onClick={() => {
                 onOpenChange(false);
                 navigate(`/w/${wsId}/settings/members`);

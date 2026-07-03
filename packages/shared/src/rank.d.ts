@@ -5,6 +5,6 @@
  */
 export declare function between(prev: string | undefined, next: string | undefined): string;
 /** Initial rank when the list is empty. */
-export declare const INITIAL_RANK = "U";
+export declare const INITIAL_RANK = 'U';
 /** Produce `count` evenly spaced ranks after `after` (undefined = start). */
 export declare function sequence(count: number, after?: string): string[];

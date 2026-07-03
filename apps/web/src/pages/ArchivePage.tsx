@@ -47,12 +47,14 @@ export function ArchivePage() {
               </div>
             </div>
             <button
+              type="button"
               onClick={() => restore.mutate(it.id)}
               className="rounded-md px-2 py-1 text-xs hover:bg-accent"
             >
               Restore
             </button>
             <button
+              type="button"
               onClick={() => {
                 if (confirm(`Permanently delete "${it.title}"? This cannot be undone.`)) {
                   purge.mutate(it.id);

@@ -1,5 +1,5 @@
-import * as Dialog from '@radix-ui/react-dialog';
 import type { DriveRoleLiteral } from '@notdrive/shared';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Globe, Link as LinkIcon, Lock, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
@@ -89,13 +89,15 @@ export function ShareDialog({
         <Dialog.Content className="fixed left-1/2 top-24 z-50 w-[560px] max-w-[95vw] -translate-x-1/2 rounded-lg border border-border bg-card shadow-2xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div className="min-w-0">
-              <Dialog.Title className="truncate text-sm font-semibold">Share "{fileName}"</Dialog.Title>
+              <Dialog.Title className="truncate text-sm font-semibold">
+                Share "{fileName}"
+              </Dialog.Title>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Managed via Google Drive's own sharing model.
               </p>
             </div>
             <Dialog.Close asChild>
-              <button className="rounded-md p-1 text-muted-foreground hover:bg-muted">
+              <button type="button" className="rounded-md p-1 text-muted-foreground hover:bg-muted">
                 <X className="size-4" />
               </button>
             </Dialog.Close>
@@ -103,10 +105,14 @@ export function ShareDialog({
 
           <div className="flex items-end gap-2 border-b border-border px-4 py-3">
             <div className="flex flex-1 flex-col">
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground/80">
+              <label
+                htmlFor="share-email"
+                className="text-[10px] uppercase tracking-wider text-muted-foreground/80"
+              >
                 Add by email
               </label>
               <input
+                id="share-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="teammate@example.com"
@@ -123,6 +129,7 @@ export function ShareDialog({
               <option value="writer">Editor</option>
             </select>
             <button
+              type="button"
               onClick={() => email && addPerson.mutate()}
               disabled={!email}
               className="flex items-center gap-1 rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
@@ -146,7 +153,9 @@ export function ShareDialog({
                     src={p.photo_link ?? ''}
                     alt=""
                     className="size-7 rounded-full bg-muted"
-                    onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+                    onError={(e) => {
+                      e.currentTarget.style.visibility = 'hidden';
+                    }}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm">
@@ -173,6 +182,7 @@ export function ShareDialog({
                   )}
                   {p.role !== 'owner' && p.role !== 'organizer' && (
                     <button
+                      type="button"
                       onClick={() => revoke.mutate(p.id)}
                       className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       title="Remove access"
@@ -214,6 +224,7 @@ export function ShareDialog({
                     <option value="writer">Editor</option>
                   </select>
                   <button
+                    type="button"
                     onClick={() => disableLink.mutate()}
                     className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
                   >
@@ -222,6 +233,7 @@ export function ShareDialog({
                 </>
               ) : (
                 <button
+                  type="button"
                   onClick={() => enableLink.mutate('reader')}
                   className="flex items-center gap-1 rounded-md bg-foreground px-3 py-1 text-xs font-medium text-background hover:opacity-90"
                 >
@@ -230,6 +242,7 @@ export function ShareDialog({
               )}
             </div>
             <button
+              type="button"
               onClick={copyLink}
               className="flex items-center justify-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs hover:bg-muted"
             >

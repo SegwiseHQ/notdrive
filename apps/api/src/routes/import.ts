@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
+import type { Variables } from '../context.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
 import { importMarkdownZip } from '../services/importer.js';
 import { badRequest } from '../util/errors.js';
-import type { Variables } from '../context.js';
 
 const app = new Hono<{ Variables: Variables }>();
 app.use('*', requireAuth, requireWorkspace('member'));

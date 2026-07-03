@@ -14,7 +14,7 @@ import {
   Quote,
   Text,
 } from 'lucide-react';
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 import { toast } from 'sonner';
 import { http } from '../../lib/http.js';
 
@@ -171,10 +171,6 @@ export const SlashMenu = forwardRef<{ onKeyDown: (e: KeyboardEvent) => boolean }
   ({ items, command }, ref) => {
     const [selected, setSelected] = useState(0);
 
-    useEffect(() => {
-      setSelected(0);
-    }, [items]);
-
     useImperativeHandle(ref, () => ({
       onKeyDown: (e: KeyboardEvent) => {
         if (e.key === 'ArrowDown') {
@@ -206,6 +202,7 @@ export const SlashMenu = forwardRef<{ onKeyDown: (e: KeyboardEvent) => boolean }
       <div className="w-72 max-h-80 overflow-auto rounded-md border border-border bg-card p-1 shadow-lg">
         {items.map((item, i) => (
           <button
+            type="button"
             key={item.title}
             onClick={() => command(item)}
             onMouseEnter={() => setSelected(i)}

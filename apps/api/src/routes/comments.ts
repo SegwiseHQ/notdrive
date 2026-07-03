@@ -1,15 +1,10 @@
 import { zValidator } from '@hono/zod-validator';
 import { commentCreateSchema } from '@notdrive/shared';
 import { Hono } from 'hono';
+import type { Variables } from '../context.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
-import {
-  createComment,
-  deleteComment,
-  editComment,
-  listForItem,
-} from '../services/comments.js';
-import type { Variables } from '../context.js';
+import { createComment, listForItem } from '../services/comments.js';
 
 const app = new Hono<{ Variables: Variables }>();
 app.use('*', requireAuth, requireWorkspace('viewer'));

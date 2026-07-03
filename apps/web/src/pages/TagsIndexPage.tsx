@@ -26,7 +26,9 @@ export function TagsIndexPage() {
       </div>
 
       <div className="mt-8">
-        <div className="mb-2 text-[11px] uppercase tracking-wider text-muted-foreground/80">Create tag</div>
+        <div className="mb-2 text-[11px] uppercase tracking-wider text-muted-foreground/80">
+          Create tag
+        </div>
         <div className="rounded-lg border border-border bg-card p-2">
           <TagList wsId={wsId} />
         </div>

@@ -78,12 +78,14 @@ export function DriveTrashPage() {
               <ExternalLink className="size-3.5" />
             </a>
             <button
+              type="button"
               onClick={() => restore.mutate(f.id)}
               className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
             >
               <RotateCcw className="size-3" /> Restore
             </button>
             <button
+              type="button"
               onClick={() => {
                 if (confirm(`PERMANENTLY delete "${f.name}"? Irreversible.`)) purge.mutate(f.id);
               }}

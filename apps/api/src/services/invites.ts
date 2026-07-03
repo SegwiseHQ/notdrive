@@ -1,9 +1,9 @@
+import type { Role } from '@notdrive/shared';
 import { and, eq, gt } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
-import { badRequest, conflict, forbidden, notFound } from '../util/errors.js';
+import { conflict, forbidden, notFound } from '../util/errors.js';
 import { newId, newInviteToken, now } from '../util/ids.js';
 import { logger } from '../util/logger.js';
-import type { Role } from '@notdrive/shared';
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -36,7 +36,9 @@ export async function acceptInvite(userId: string, userEmail: string, token: str
   const rows = await db
     .select()
     .from(schema.workspace_invites)
-    .where(and(eq(schema.workspace_invites.token, token), gt(schema.workspace_invites.expires_at, ts)))
+    .where(
+      and(eq(schema.workspace_invites.token, token), gt(schema.workspace_invites.expires_at, ts)),
+    )
     .limit(1);
   const inv = rows[0];
   if (!inv) throw notFound('invite not found or expired');

@@ -1,4 +1,5 @@
 import type { DarkMode, EventKind, ItemType, Role, TagColor, ViewLayout } from './enums.js';
+import type { AutoShareMode, DriveRoleLiteral } from './zod.js';
 
 export interface UserDTO {
   id: string;
@@ -13,6 +14,8 @@ export interface WorkspaceDTO {
   name: string;
   created_by: string;
   created_at: number;
+  auto_share_mode: AutoShareMode;
+  auto_share_role: DriveRoleLiteral;
   role: Role;
 }
 

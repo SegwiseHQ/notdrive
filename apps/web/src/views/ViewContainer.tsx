@@ -43,11 +43,14 @@ export function ViewContainer({
             const Icon = ICON[l];
             return (
               <button
+                type="button"
                 key={l}
                 onClick={() => setLayout(l)}
                 className={cn(
                   'rounded p-1.5 text-muted-foreground transition',
-                  layout === l ? 'bg-background text-foreground shadow-sm' : 'hover:text-foreground',
+                  layout === l
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'hover:text-foreground',
                 )}
                 title={l}
               >

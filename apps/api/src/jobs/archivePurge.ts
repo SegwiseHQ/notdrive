@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, lt } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
-import { logger } from '../util/logger.js';
 import { now } from '../util/ids.js';
+import { logger } from '../util/logger.js';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 

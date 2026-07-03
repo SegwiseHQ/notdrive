@@ -1,6 +1,6 @@
 import type { MeDTO } from '@notdrive/shared';
-import { Check, ChevronsUpDown } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../../lib/store.js';
@@ -22,7 +22,7 @@ export function WorkspaceSwitcher({ me }: { me: MeDTO }) {
   // concept), label the header with the user's own name rather than the
   // auto-created workspace name — matches the Drive-style mental model.
   const soloLabel = (me.user.name ?? me.user.email ?? 'NotDrive').trim();
-  const activeName = hasMultiple ? active?.name ?? 'NotDrive' : soloLabel;
+  const activeName = hasMultiple ? (active?.name ?? 'NotDrive') : soloLabel;
 
   if (!hasMultiple) {
     return (
@@ -36,7 +36,10 @@ export function WorkspaceSwitcher({ me }: { me: MeDTO }) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition hover:bg-muted">
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition hover:bg-muted"
+        >
           <img src="/icon.png" alt="" className="size-5 rounded" />
           <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{activeName}</span>
           <ChevronsUpDown className="size-3 text-muted-foreground/70" />
@@ -49,6 +52,7 @@ export function WorkspaceSwitcher({ me }: { me: MeDTO }) {
         >
           {me.workspaces.map((w) => (
             <button
+              type="button"
               key={w.id}
               onClick={() => {
                 setActiveWs(w.id);

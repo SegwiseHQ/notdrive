@@ -13,7 +13,10 @@ import 'tippy.js/dist/tippy.css';
 // muted background; the highlight colors stay visible on either.
 import 'highlight.js/styles/github-dark.css';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root');
+if (!root) throw new Error('Missing root element');
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />

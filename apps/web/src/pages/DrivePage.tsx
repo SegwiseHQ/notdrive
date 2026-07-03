@@ -68,7 +68,8 @@ export function DrivePage() {
     return m;
   }, [allItems.data]);
 
-  const pathIds = (params.get('p') ?? '').split(',').filter(Boolean);
+  const pathKey = params.get('p') ?? '';
+  const pathIds = useMemo(() => pathKey.split(',').filter(Boolean), [pathKey]);
   const trail = useMemo(() => {
     if (!tree.data) return [] as DriveTreeNode[];
     const out: DriveTreeNode[] = [tree.data];
@@ -80,7 +81,7 @@ export function DrivePage() {
       cursor = next;
     }
     return out;
-  }, [tree.data, pathIds.join(',')]);
+  }, [tree.data, pathIds]);
 
   const currentFolder = trail[trail.length - 1] ?? tree.data;
   const needle = q.trim().toLowerCase();
@@ -162,6 +163,7 @@ export function DrivePage() {
     <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-12 py-10">
       <div className="mb-4 flex items-center gap-1 text-sm">
         <button
+          type="button"
           onClick={() => goUpTo(0)}
           className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground transition hover:bg-muted"
         >
@@ -172,6 +174,7 @@ export function DrivePage() {
           <div key={node.id} className="flex items-center gap-1">
             <ChevronRight className="size-3 text-muted-foreground/60" />
             <button
+              type="button"
               onClick={() => goUpTo(i + 1)}
               className="rounded-md px-1.5 py-0.5 text-muted-foreground transition hover:bg-muted"
             >
@@ -205,11 +208,14 @@ export function DrivePage() {
               const Icon = l === 'list' ? List : LayoutGrid;
               return (
                 <button
+                  type="button"
                   key={l}
                   onClick={() => setLayout(l)}
                   className={cn(
                     'rounded p-1.5 text-muted-foreground transition',
-                    layout === l ? 'bg-background text-foreground shadow-sm' : 'hover:text-foreground',
+                    layout === l
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'hover:text-foreground',
                   )}
                   title={l}
                 >
@@ -219,6 +225,7 @@ export function DrivePage() {
             })}
           </div>
           <button
+            type="button"
             onClick={() => sync.mutate()}
             disabled={sync.isPending}
             className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
@@ -316,7 +323,11 @@ function Row({
   return (
     <li>
       <div className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition hover:bg-muted/70">
-        <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
           {isFolder ? (
             <Folder className="size-3.5 shrink-0 text-muted-foreground/80" />
           ) : isLinked ? (
@@ -353,6 +364,7 @@ function Row({
             parentFolderId={node.id}
             trigger={
               <button
+                type="button"
                 onClick={(e) => e.stopPropagation()}
                 className="rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100"
                 title={`Create new Drive file inside "${node.name}"`}
@@ -392,6 +404,7 @@ function Card({
   const isLinked = !!linkedItem;
   return (
     <button
+      type="button"
       onClick={onOpen}
       className={cn(
         'group flex aspect-[4/3] cursor-pointer flex-col justify-between rounded-md border p-3 text-left transition hover:border-ring hover:bg-muted/60',
@@ -413,7 +426,9 @@ function Card({
         )}
       </div>
       <div>
-        <div className="truncate text-sm font-medium">{isLinked ? linkedItem.title : node.name}</div>
+        <div className="truncate text-sm font-medium">
+          {isLinked ? linkedItem.title : node.name}
+        </div>
         {isLinked ? (
           <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{node.name}</div>
         ) : (

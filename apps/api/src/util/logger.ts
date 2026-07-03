@@ -12,11 +12,14 @@ const redact = {
     '*.refresh_token',
   ],
   remove: true,
-} as const;
+};
 
 // Synchronous pretty stream in dev (no worker thread to drain on SIGINT).
 // Structured JSON to stdout in prod.
 export const logger =
   env.NODE_ENV === 'development'
-    ? pino({ level: env.LOG_LEVEL, redact }, pretty({ colorize: true, translateTime: 'HH:MM:ss.l', sync: true }))
+    ? pino(
+        { level: env.LOG_LEVEL, redact },
+        pretty({ colorize: true, translateTime: 'HH:MM:ss.l', sync: true }),
+      )
     : pino({ level: env.LOG_LEVEL, redact });

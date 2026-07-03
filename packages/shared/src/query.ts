@@ -26,9 +26,7 @@ export type Term =
   | { kind: 'is'; flag: 'favorite' | 'archived' | 'page' | 'file' }
   | { kind: 'in'; value: string };
 
-export type ModifiedValue =
-  | { kind: 'relative_days'; days: number }
-  | { kind: 'date'; iso: string };
+export type ModifiedValue = { kind: 'relative_days'; days: number } | { kind: 'date'; iso: string };
 
 export type Ast =
   | { kind: 'term'; term: Term }
@@ -53,7 +51,7 @@ class Lexer {
   tokens(): Tok[] {
     const out: Tok[] = [];
     while (this.i < this.src.length) {
-      const ch = this.src[this.i]!;
+      const ch = this.src.charAt(this.i);
       if (ch === ' ' || ch === '\t' || ch === '\n') {
         this.i++;
         continue;
@@ -81,7 +79,7 @@ class Lexer {
       // Word: run of non-space, non-paren.
       let word = '';
       while (this.i < this.src.length) {
-        const c = this.src[this.i]!;
+        const c = this.src.charAt(this.i);
         if (c === ' ' || c === '\t' || c === '\n' || c === '(' || c === ')') break;
         word += c;
         this.i++;

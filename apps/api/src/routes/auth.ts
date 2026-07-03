@@ -1,15 +1,15 @@
+import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { eq } from 'drizzle-orm';
-import { env, loadServerEnv } from '../env.js';
-import { db, schema } from '../db/index.js';
 import { buildAuthUrl, exchangeCode, getProfile } from '../auth/google.js';
-import { newId, newSessionId, now } from '../util/ids.js';
+import type { Variables } from '../context.js';
+import { db, schema } from '../db/index.js';
+import { loadServerEnv } from '../env.js';
+import { SESSION_COOKIE } from '../middleware/auth.js';
 import { saveGoogleTokens } from '../services/tokens.js';
 import { createPersonalWorkspace } from '../services/workspaces.js';
 import { badRequest } from '../util/errors.js';
-import { SESSION_COOKIE } from '../middleware/auth.js';
-import type { Variables } from '../context.js';
+import { newId, newSessionId, now } from '../util/ids.js';
 import { logger } from '../util/logger.js';
 
 const app = new Hono<{ Variables: Variables }>();
@@ -78,7 +78,8 @@ app.get('/google/callback', async (c) => {
   deleteCookie(c, STATE_COOKIE);
 
   const tokens = await exchangeCode(code);
-  const profile = await getProfile(tokens.id_token!);
+  if (!tokens.id_token) throw badRequest('oauth provider did not return an id token');
+  const profile = await getProfile(tokens.id_token);
 
   // Email-domain allowlist. Empty env = no restriction.
   const allowed = loadServerEnv().ALLOWED_EMAIL_DOMAINS;

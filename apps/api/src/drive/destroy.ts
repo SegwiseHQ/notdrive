@@ -1,7 +1,7 @@
+import { logger } from '../util/logger.js';
 import { driveClientFor } from './client.js';
 import { withDriveLimit } from './limiter.js';
 import { invalidateTreeCache } from './tree.js';
-import { logger } from '../util/logger.js';
 
 /**
  * Move a Drive file to the user's Drive trash (recoverable for 30 days).
@@ -43,9 +43,7 @@ export async function untrashDriveFile(userId: string, fileId: string): Promise<
  */
 export async function permanentlyDeleteDriveFile(userId: string, fileId: string): Promise<void> {
   const drive = await driveClientFor(userId);
-  await withDriveLimit(userId, () =>
-    drive.files.delete({ fileId, supportsAllDrives: true }),
-  );
+  await withDriveLimit(userId, () => drive.files.delete({ fileId, supportsAllDrives: true }));
   invalidateTreeCache(userId);
   logger.info({ fileId, userId }, 'drive file permanently deleted');
 }

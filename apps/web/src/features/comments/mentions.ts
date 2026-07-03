@@ -7,12 +7,14 @@ const MENTION_RE = /@\[([^\]]+)\]\(([^)]+)\)/g;
 
 export interface MentionToken {
   kind: 'mention';
+  key: string;
   label: string;
   userId: string;
 }
 
 export interface TextToken {
   kind: 'text';
+  key: string;
   text: string;
 }
 
@@ -24,11 +26,18 @@ export function tokenizeCommentBody(body: string): CommentToken[] {
   let last = 0;
   for (const m of body.matchAll(MENTION_RE)) {
     const start = m.index ?? 0;
-    if (start > last) tokens.push({ kind: 'text', text: body.slice(last, start) });
-    tokens.push({ kind: 'mention', label: m[1] ?? '', userId: m[2] ?? '' });
+    if (start > last)
+      tokens.push({ kind: 'text', key: `text-${last}`, text: body.slice(last, start) });
+    tokens.push({
+      kind: 'mention',
+      key: `mention-${start}`,
+      label: m[1] ?? '',
+      userId: m[2] ?? '',
+    });
     last = start + m[0].length;
   }
-  if (last < body.length) tokens.push({ kind: 'text', text: body.slice(last) });
+  if (last < body.length)
+    tokens.push({ kind: 'text', key: `text-${last}`, text: body.slice(last) });
   return tokens;
 }
 

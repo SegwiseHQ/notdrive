@@ -20,16 +20,19 @@ export function CommandPalette() {
   const toggleSidebar = useUi((s) => s.toggleSidebar);
   const [q, setQ] = useState('');
 
-  const ctx: CommandContext = {
-    wsId,
-    itemId,
-    navigate,
-    qc,
-    setDark,
-    toggleSidebar,
-    openPalette: setOpen,
-    toast: (m) => toast.success(m),
-  };
+  const ctx: CommandContext = useMemo(
+    () => ({
+      wsId,
+      itemId,
+      navigate,
+      qc,
+      setDark,
+      toggleSidebar,
+      openPalette: setOpen,
+      toast: (m) => toast.success(m),
+    }),
+    [wsId, itemId, navigate, qc, setDark, toggleSidebar, setOpen],
+  );
   const visible = useMemo(() => COMMANDS.filter((c) => (c.when ? c.when(ctx) : true)), [ctx]);
 
   const searchQuery = useQuery({
@@ -68,7 +71,9 @@ export function CommandPalette() {
               className="w-full rounded-t-lg border-b border-border bg-transparent px-4 py-3 text-sm outline-none"
             />
             <Command.List className="max-h-[60vh] overflow-auto p-1">
-              <Command.Empty className="p-4 text-sm text-muted-foreground">No results</Command.Empty>
+              <Command.Empty className="p-4 text-sm text-muted-foreground">
+                No results
+              </Command.Empty>
 
               {searchQuery.data && searchQuery.data.length > 0 && (
                 <Command.Group heading="Pages">
@@ -84,7 +89,9 @@ export function CommandPalette() {
                     >
                       <span className="min-w-0 flex-1 truncate">{it.title}</span>
                       {it.drive?.name && (
-                        <span className="truncate text-xs text-muted-foreground">{it.drive.name}</span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {it.drive.name}
+                        </span>
                       )}
                     </Command.Item>
                   ))}
@@ -134,12 +141,14 @@ export function CommandPalette() {
                 <Command.Group heading={section} key={section}>
                   {cmds
                     .filter((c) =>
-                      q.trim() === '' ? true : (c.title + ' ' + (c.keywords ?? '')).toLowerCase().includes(q.toLowerCase()),
+                      q.trim() === ''
+                        ? true
+                        : `${c.title} ${c.keywords ?? ''}`.toLowerCase().includes(q.toLowerCase()),
                     )
                     .map((c) => (
                       <Command.Item
                         key={c.id}
-                        value={c.id + ' ' + c.title}
+                        value={`${c.id} ${c.title}`}
                         onSelect={() => {
                           setOpen(false);
                           void c.run(ctx);
@@ -166,7 +175,9 @@ export function CommandPalette() {
 
 function groupBy(cmds: typeof COMMANDS) {
   return cmds.reduce<Record<string, typeof COMMANDS>>((acc, c) => {
-    (acc[c.section] ??= []).push(c);
+    const group = acc[c.section] ?? [];
+    group.push(c);
+    acc[c.section] = group;
     return acc;
   }, {});
 }

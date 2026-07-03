@@ -1,6 +1,6 @@
 import { type Ast, parseQuery } from '@notdrive/shared';
 import type { ItemDTO } from '@notdrive/shared';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { type SQL, and, eq, inArray, sql } from 'drizzle-orm';
 import { db, driver, schema } from '../db/index.js';
 import { hydrate, visibilityClause } from './items.js';
 
@@ -15,7 +15,12 @@ import { hydrate, visibilityClause } from './items.js';
  *
  * FTS is used for text terms when available; other terms are SQL-native.
  */
-export async function search(workspaceId: string, userId: string, queryText: string, limit: number): Promise<ItemDTO[]> {
+export async function search(
+  workspaceId: string,
+  userId: string,
+  queryText: string,
+  limit: number,
+): Promise<ItemDTO[]> {
   const ast = parseQuery(queryText);
   if (ast.kind === 'empty') return [];
 
@@ -45,7 +50,12 @@ export async function search(workspaceId: string, userId: string, queryText: str
   return hydrate(workspaceId, userId, rows);
 }
 
-async function evalAst(workspaceId: string, userId: string, universe: Set<string>, node: Ast): Promise<Set<string>> {
+async function evalAst(
+  workspaceId: string,
+  userId: string,
+  universe: Set<string>,
+  node: Ast,
+): Promise<Set<string>> {
   switch (node.kind) {
     case 'term':
       return evalTerm(workspaceId, userId, universe, node.term);
@@ -68,7 +78,12 @@ async function evalAst(workspaceId: string, userId: string, universe: Set<string
   }
 }
 
-async function evalTerm(workspaceId: string, userId: string, _universe: Set<string>, term: import('@notdrive/shared').Term): Promise<Set<string>> {
+async function evalTerm(
+  workspaceId: string,
+  userId: string,
+  _universe: Set<string>,
+  term: import('@notdrive/shared').Term,
+): Promise<Set<string>> {
   switch (term.kind) {
     case 'text':
       return textMatch(workspaceId, term.value);
@@ -100,14 +115,17 @@ async function textMatch(workspaceId: string, needle: string): Promise<Set<strin
   }
   // Postgres: tsvector covering title + (HTML-stripped) body; LIKE on drive_file_cache.name as fallback.
   const q = needle.replace(/\s+/g, ' & ');
-  const rows = (await db.execute(sql`
+  const pgDb = db as unknown as {
+    execute: (query: SQL) => Promise<{ rows: Array<{ id: string }> }>;
+  };
+  const rows = await pgDb.execute(sql`
     SELECT i.id FROM items i
     LEFT JOIN drive_file_cache d
       ON d.workspace_id = i.workspace_id AND d.drive_file_id = i.drive_file_id
     WHERE i.workspace_id = ${workspaceId}
       AND (i.search_tsv @@ to_tsquery('simple', ${q})
-           OR d.name ILIKE ${'%' + needle + '%'})
-  `)) as unknown as { rows: Array<{ id: string }> };
+           OR d.name ILIKE ${`%${needle}%`})
+  `);
   return new Set(rows.rows.map((r) => r.id));
 }
 
@@ -116,7 +134,12 @@ async function tagMatch(workspaceId: string, name: string): Promise<Set<string>>
     .select({ item_id: schema.item_tags.item_id })
     .from(schema.item_tags)
     .innerJoin(schema.tags, eq(schema.tags.id, schema.item_tags.tag_id))
-    .where(and(eq(schema.tags.workspace_id, workspaceId), sql`lower(${schema.tags.name}) = lower(${name})`));
+    .where(
+      and(
+        eq(schema.tags.workspace_id, workspaceId),
+        sql`lower(${schema.tags.name}) = lower(${name})`,
+      ),
+    );
   return new Set(rows.map((r) => r.item_id));
 }
 
@@ -134,7 +157,7 @@ async function mimeMatch(workspaceId: string, needle: string): Promise<Set<strin
     .where(
       and(
         eq(schema.items.workspace_id, workspaceId),
-        sql`lower(${schema.drive_file_cache.mime_type}) LIKE ${'%' + needle + '%'}`,
+        sql`lower(${schema.drive_file_cache.mime_type}) LIKE ${`%${needle}%`}`,
       ),
     );
   return new Set(rows.map((r) => r.id));
@@ -145,11 +168,14 @@ async function modifiedMatch(
   op: '<' | '>' | '=',
   value: import('@notdrive/shared').ModifiedValue,
 ): Promise<Set<string>> {
-  const threshold = value.kind === 'relative_days'
-    ? Date.now() - value.days * 86_400_000
-    : Date.parse(value.iso);
+  const threshold =
+    value.kind === 'relative_days' ? Date.now() - value.days * 86_400_000 : Date.parse(value.iso);
   const rows = await db
-    .select({ id: schema.items.id, modified: schema.drive_file_cache.modified_time, updated: schema.items.updated_at })
+    .select({
+      id: schema.items.id,
+      modified: schema.drive_file_cache.modified_time,
+      updated: schema.items.updated_at,
+    })
     .from(schema.items)
     .leftJoin(
       schema.drive_file_cache,
@@ -202,7 +228,10 @@ async function isFlag(
       conds.push(eq(schema.items.type, 'file'));
       break;
   }
-  const rows = await db.select({ id: schema.items.id }).from(schema.items).where(and(...conds));
+  const rows = await db
+    .select({ id: schema.items.id })
+    .from(schema.items)
+    .where(and(...conds));
   return new Set(rows.map((r) => r.id));
 }
 
@@ -213,7 +242,7 @@ async function inParent(workspaceId: string, titleNeedle: string): Promise<Set<s
     .where(
       and(
         eq(schema.items.workspace_id, workspaceId),
-        sql`lower(${schema.items.title}) LIKE ${'%' + titleNeedle.toLowerCase() + '%'}`,
+        sql`lower(${schema.items.title}) LIKE ${`%${titleNeedle.toLowerCase()}%`}`,
       ),
     );
   const parentIds = new Set(parents.map((p) => p.id));

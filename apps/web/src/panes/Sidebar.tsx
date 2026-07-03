@@ -1,4 +1,5 @@
 import type { MeDTO } from '@notdrive/shared';
+import type { DarkMode } from '@notdrive/shared';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -26,20 +27,17 @@ import { CreateDriveMenu } from '../features/drive-picker/CreateDriveMenu.js';
 import { NotificationBell } from '../features/notifications/NotificationBell.js';
 import { DriveTreePanel } from '../features/tree/DriveTreePanel.js';
 import { TreePanel } from '../features/tree/TreePanel.js';
+import { WorkspaceSwitcher } from '../features/workspaces/WorkspaceSwitcher.js';
 import { http } from '../lib/http.js';
 import { useCommand, useUi } from '../lib/store.js';
-import type { DarkMode } from '@notdrive/shared';
 import { cn } from '../lib/utils.js';
-import { WorkspaceSwitcher } from '../features/workspaces/WorkspaceSwitcher.js';
 
 export function Sidebar({ me }: { me: MeDTO }) {
   const { wsId = '' } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [pagesOpen, setPagesOpen] = useState(true);
-  const [driveOpen, setDriveOpen] = useState(
-    localStorage.getItem('notdrive.drive-open') !== '0',
-  );
+  const [driveOpen, setDriveOpen] = useState(localStorage.getItem('notdrive.drive-open') !== '0');
 
   const favoritesQuery = useQuery({
     queryKey: ['items', wsId, 'favorites'],
@@ -92,6 +90,7 @@ export function Sidebar({ me }: { me: MeDTO }) {
           setOpen={setPagesOpen}
           right={
             <button
+              type="button"
               onClick={async (e) => {
                 e.stopPropagation();
                 const it = await http.createItem({ title: 'Untitled', parent_id: null });
@@ -117,6 +116,7 @@ export function Sidebar({ me }: { me: MeDTO }) {
               <CreateDriveMenu
                 trigger={
                   <button
+                    type="button"
                     onClick={(e) => e.stopPropagation()}
                     className="rounded p-0.5 text-muted-foreground transition hover:bg-background"
                     title="Create new Drive file"
@@ -126,6 +126,7 @@ export function Sidebar({ me }: { me: MeDTO }) {
                 }
               />
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/w/${wsId}/drive/trash`);
@@ -136,6 +137,7 @@ export function Sidebar({ me }: { me: MeDTO }) {
                 <Trash2 className="size-3.5" />
               </button>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/w/${wsId}/drive`);
@@ -156,7 +158,9 @@ export function Sidebar({ me }: { me: MeDTO }) {
           src={me.user.avatar_url ?? ''}
           alt=""
           className="size-5 rounded-full bg-muted"
-          onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+          onError={(e) => {
+            e.currentTarget.style.visibility = 'hidden';
+          }}
         />
         <div className="min-w-0 flex-1 truncate">{me.user.email}</div>
         <ThemeToggle />
@@ -174,7 +178,11 @@ function ThemeToggle() {
     void http.patchMe({ dark_mode: m }).catch(() => {});
   };
 
-  const opts: { value: DarkMode; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  const opts: {
+    value: DarkMode;
+    label: string;
+    Icon: React.ComponentType<{ className?: string }>;
+  }[] = [
     { value: 'system', label: 'System', Icon: Monitor },
     { value: 'light', label: 'Light', Icon: Sun },
     { value: 'dark', label: 'Dark', Icon: Moon },
@@ -184,6 +192,7 @@ function ThemeToggle() {
     <div className="flex items-center gap-0.5 rounded-md bg-muted/80 p-0.5">
       {opts.map(({ value, label, Icon }) => (
         <button
+          type="button"
           key={value}
           onClick={() => choose(value)}
           title={label}
@@ -217,6 +226,7 @@ function SectionHeader({
   return (
     <div className="mt-3 flex items-center gap-1 px-1">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         className="group flex flex-1 items-center gap-1 rounded-md px-1 py-0.5 text-[11px] uppercase tracking-wider text-muted-foreground/80 transition hover:text-foreground"
       >
@@ -246,7 +256,11 @@ function OverflowMenu({ wsId }: { wsId: string }) {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <button className="rounded-md p-1 text-muted-foreground transition hover:bg-muted" title="More">
+        <button
+          type="button"
+          className="rounded-md p-1 text-muted-foreground transition hover:bg-muted"
+          title="More"
+        >
           <MoreHorizontal className="size-4" />
         </button>
       </DropdownMenu.Trigger>
@@ -277,8 +291,7 @@ function OverflowMenu({ wsId }: { wsId: string }) {
 // command execution all share one entry point.
 function SidebarSearchTrigger() {
   const setOpen = useCommand((s) => s.setOpen);
-  const isMac =
-    typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform);
+  const isMac = typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform);
   return (
     <button
       type="button"

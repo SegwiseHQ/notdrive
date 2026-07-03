@@ -9,16 +9,13 @@ export function SidebarResizer() {
   const setSidebarWidth = useUi((s) => s.setSidebarWidth);
   const dragging = useRef(false);
 
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      dragging.current = true;
-      (e.target as HTMLDivElement).setPointerCapture(e.pointerId);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    },
-    [],
-  );
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    dragging.current = true;
+    (e.target as HTMLDivElement).setPointerCapture(e.pointerId);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -38,9 +35,11 @@ export function SidebarResizer() {
   useEffect(() => () => stop(), [stop]);
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: this is a draggable, pointer-driven splitter with a custom visual handle.
     <div
       role="separator"
       aria-orientation="vertical"
+      tabIndex={0}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={stop}

@@ -84,7 +84,7 @@ export async function addPermission(
       supportsAllDrives: true,
       sendNotificationEmail:
         input.type === 'user' || input.type === 'group'
-          ? input.send_notification_email ?? true
+          ? (input.send_notification_email ?? true)
           : false,
       emailMessage: input.email_message,
       fields: PERMISSION_FIELDS,
@@ -151,9 +151,7 @@ export async function enableLinkSharing(
   let permission: DrivePermission;
   if (existing) {
     permission =
-      existing.role === role
-        ? existing
-        : await updatePermission(userId, fileId, existing.id, role);
+      existing.role === role ? existing : await updatePermission(userId, fileId, existing.id, role);
   } else {
     permission = await addPermission(userId, fileId, {
       type: 'anyone',

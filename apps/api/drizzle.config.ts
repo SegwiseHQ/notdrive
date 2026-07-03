@@ -14,7 +14,9 @@ const config: Config =
     ? {
         ...common,
         dialect: 'postgresql',
-        dbCredentials: { url: process.env.DATABASE_URL ?? 'postgres://notdrive:notdrive@localhost:5432/notdrive' },
+        dbCredentials: {
+          url: process.env.DATABASE_URL ?? 'postgres://notdrive:notdrive@localhost:5432/notdrive',
+        },
       }
     : {
         ...common,

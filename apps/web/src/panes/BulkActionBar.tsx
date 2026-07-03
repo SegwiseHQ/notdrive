@@ -81,6 +81,7 @@ export function BulkActionBar() {
         {isDriveMode && (
           <>
             <button
+              type="button"
               onClick={() => {
                 if (confirm(`Move ${count} Drive file${count === 1 ? '' : 's'} to trash?`))
                   trashAll.mutate();
@@ -91,6 +92,7 @@ export function BulkActionBar() {
               <Trash2 className="size-3" /> Move to trash
             </button>
             <button
+              type="button"
               onClick={() => {
                 if (
                   confirm(
@@ -108,6 +110,7 @@ export function BulkActionBar() {
         )}
         <span className="h-4 w-px bg-border" />
         <button
+          type="button"
           onClick={clear}
           className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
         >

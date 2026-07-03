@@ -28,7 +28,11 @@ export async function createView(
     name: body.name,
     query: body.query,
     layout: body.layout,
-    sort: body.sort ? (typeof body.sort === 'string' ? body.sort : JSON.stringify(body.sort)) : null,
+    sort: body.sort
+      ? typeof body.sort === 'string'
+        ? body.sort
+        : JSON.stringify(body.sort)
+      : null,
     created_at: ts,
   });
   return { id, created_at: ts };
@@ -47,7 +51,13 @@ export async function patchView(
       ...(patch.query !== undefined ? { query: patch.query } : {}),
       ...(patch.layout ? { layout: patch.layout } : {}),
       ...(patch.sort !== undefined
-        ? { sort: patch.sort ? (typeof patch.sort === 'string' ? patch.sort : JSON.stringify(patch.sort)) : null }
+        ? {
+            sort: patch.sort
+              ? typeof patch.sort === 'string'
+                ? patch.sort
+                : JSON.stringify(patch.sort)
+              : null,
+          }
         : {}),
     })
     .where(

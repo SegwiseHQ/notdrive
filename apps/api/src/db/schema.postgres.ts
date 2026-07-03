@@ -35,7 +35,9 @@ export const users = pgTable('users', {
 export const oauth_accounts = pgTable(
   'oauth_accounts',
   {
-    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     provider: text('provider').notNull(),
     access_token_ct: text('access_token_ct').notNull(),
     access_token_iv: text('access_token_iv').notNull(),
@@ -52,7 +54,9 @@ export const sessions = pgTable(
   'sessions',
   {
     id: text('id').primaryKey(),
-    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     user_agent: text('user_agent'),
     expires_at: ts('expires_at').notNull(),
     last_seen_at: ts('last_seen_at').notNull(),
@@ -64,7 +68,9 @@ export const sessions = pgTable(
 export const workspaces = pgTable('workspaces', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  created_by: text('created_by').notNull().references(() => users.id),
+  created_by: text('created_by')
+    .notNull()
+    .references(() => users.id),
   auto_share_mode: text('auto_share_mode').notNull().default('off'),
   auto_share_role: text('auto_share_role').notNull().default('reader'),
   created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
@@ -73,8 +79,12 @@ export const workspaces = pgTable('workspaces', {
 export const workspace_members = pgTable(
   'workspace_members',
   {
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     role: text('role').notNull(),
     joined_at: ts('joined_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
   },
@@ -86,11 +96,15 @@ export const workspace_members = pgTable(
 
 export const workspace_invites = pgTable('workspace_invites', {
   id: text('id').primaryKey(),
-  workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  workspace_id: text('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
   email: text('email').notNull(),
   role: text('role').notNull(),
   token: text('token').notNull().unique(),
-  invited_by: text('invited_by').notNull().references(() => users.id),
+  invited_by: text('invited_by')
+    .notNull()
+    .references(() => users.id),
   expires_at: ts('expires_at').notNull(),
   accepted_at: ts('accepted_at'),
   created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
@@ -100,7 +114,9 @@ export const items = pgTable(
   'items',
   {
     id: text('id').primaryKey(),
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     type: text('type').notNull(),
     title: text('title').notNull(),
     drive_file_id: text('drive_file_id'),
@@ -115,7 +131,9 @@ export const items = pgTable(
     // Child items inherit visibility + owner_id from their parent at create time.
     visibility: text('visibility').notNull().default('workspace'),
     owner_id: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
-    created_by: text('created_by').notNull().references(() => users.id),
+    created_by: text('created_by')
+      .notNull()
+      .references(() => users.id),
     created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
     updated_at: ts('updated_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
   },
@@ -126,7 +144,10 @@ export const items = pgTable(
     // Speeds up the private-items filter on every list/search.
     idxVisibility: index('items_visibility').on(t.workspace_id, t.visibility, t.owner_id),
     // Defense in depth: catches bad writes that bypass app-level zod validation.
-    visibilityCheck: check('items_visibility_check', sql`${t.visibility} IN ('workspace', 'private')`),
+    visibilityCheck: check(
+      'items_visibility_check',
+      sql`${t.visibility} IN ('workspace', 'private')`,
+    ),
   }),
 );
 
@@ -134,7 +155,9 @@ export const tags = pgTable(
   'tags',
   {
     id: text('id').primaryKey(),
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     color: text('color').notNull().default('gray'),
     created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
@@ -145,8 +168,12 @@ export const tags = pgTable(
 export const item_tags = pgTable(
   'item_tags',
   {
-    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
-    tag_id: text('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+    item_id: text('item_id')
+      .notNull()
+      .references(() => items.id, { onDelete: 'cascade' }),
+    tag_id: text('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.item_id, t.tag_id] }),
@@ -161,9 +188,15 @@ export const item_tags = pgTable(
 export const user_item_favorites = pgTable(
   'user_item_favorites',
   {
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    item_id: text('item_id')
+      .notNull()
+      .references(() => items.id, { onDelete: 'cascade' }),
     created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
   },
   (t) => ({
@@ -174,8 +207,12 @@ export const user_item_favorites = pgTable(
 
 export const views = pgTable('views', {
   id: text('id').primaryKey(),
-  workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-  user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspace_id: text('workspace_id')
+    .notNull()
+    .references(() => workspaces.id, { onDelete: 'cascade' }),
+  user_id: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   query: text('query').notNull().default(''),
   sort: jsonb('sort'),
@@ -192,8 +229,12 @@ export const item_assets = pgTable(
   'item_assets',
   {
     id: text('id').primaryKey(),
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    item_id: text('item_id')
+      .notNull()
+      .references(() => items.id, { onDelete: 'cascade' }),
     content_type: text('content_type').notNull(),
     byte_size: bigint('byte_size', { mode: 'number' }).notNull(),
     data: bytea('data').notNull(),
@@ -209,9 +250,15 @@ export const item_events = pgTable(
   'item_events',
   {
     id: text('id').primaryKey(),
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    item_id: text('item_id')
+      .notNull()
+      .references(() => items.id, { onDelete: 'cascade' }),
     kind: text('kind').notNull(),
     reason: text('reason'),
     created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
@@ -226,7 +273,9 @@ export const drive_file_cache = pgTable(
   'drive_file_cache',
   {
     drive_file_id: text('drive_file_id').notNull(),
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     mime_type: text('mime_type').notNull(),
     icon_link: text('icon_link'),
@@ -243,8 +292,12 @@ export const drive_file_cache = pgTable(
 export const drive_sync_state = pgTable(
   'drive_sync_state',
   {
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     start_page_token: text('start_page_token'),
     last_polled_at: ts('last_polled_at'),
   },
@@ -258,8 +311,12 @@ export const comment_threads = pgTable(
   'comment_threads',
   {
     id: text('id').primaryKey(),
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-    item_id: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    item_id: text('item_id')
+      .notNull()
+      .references(() => items.id, { onDelete: 'cascade' }),
     anchor: text('anchor'),
     resolved_at: ts('resolved_at'),
     resolved_by: text('resolved_by').references(() => users.id, { onDelete: 'set null' }),
@@ -278,7 +335,9 @@ export const comments = pgTable(
   'comments',
   {
     id: text('id').primaryKey(),
-    thread_id: text('thread_id').notNull().references(() => comment_threads.id, { onDelete: 'cascade' }),
+    thread_id: text('thread_id')
+      .notNull()
+      .references(() => comment_threads.id, { onDelete: 'cascade' }),
     user_id: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     body: text('body').notNull(),
     created_at: ts('created_at').notNull().default(sql`(EXTRACT(EPOCH FROM now()) * 1000)::bigint`),
@@ -298,8 +357,12 @@ export const notifications = pgTable(
   'notifications',
   {
     id: text('id').primaryKey(),
-    workspace_id: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-    user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    workspace_id: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     kind: text('kind').notNull(),
     item_id: text('item_id').references(() => items.id, { onDelete: 'cascade' }),
     thread_id: text('thread_id').references(() => comment_threads.id, { onDelete: 'cascade' }),

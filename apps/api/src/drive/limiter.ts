@@ -65,7 +65,8 @@ export async function withDriveLimit<T>(userId: string, fn: () => Promise<T>): P
         minTimeout: 400,
         factor: 2,
         randomize: true,
-        onFailedAttempt: (e) => logger.warn({ err: e.message, attempt: e.attemptNumber }, 'drive retry'),
+        onFailedAttempt: (e) =>
+          logger.warn({ err: e.message, attempt: e.attemptNumber }, 'drive retry'),
       },
     ),
   );

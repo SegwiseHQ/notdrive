@@ -1,10 +1,10 @@
 import { zValidator } from '@hono/zod-validator';
 import { tagCreateSchema, tagPatchSchema } from '@notdrive/shared';
 import { Hono } from 'hono';
+import type { Variables } from '../context.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireWorkspace } from '../middleware/workspace.js';
-import { attachTag, createTag, deleteTag, detachTag, listTags, patchTag } from '../services/tags.js';
-import type { Variables } from '../context.js';
+import { createTag, deleteTag, listTags, patchTag } from '../services/tags.js';
 
 const app = new Hono<{ Variables: Variables }>();
 app.use('*', requireAuth, requireWorkspace('viewer'));

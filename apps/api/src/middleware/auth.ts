@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import type { MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
-import { db, schema } from '../db/index.js';
 import type { Variables } from '../context.js';
+import { db, schema } from '../db/index.js';
 import { unauthorized } from '../util/errors.js';
 import { now } from '../util/ids.js';
 

@@ -11,10 +11,7 @@ export async function listRecent(workspaceId: string, userId: string, limit = 40
     })
     .from(schema.item_events)
     .where(
-      and(
-        eq(schema.item_events.workspace_id, workspaceId),
-        eq(schema.item_events.user_id, userId),
-      ),
+      and(eq(schema.item_events.workspace_id, workspaceId), eq(schema.item_events.user_id, userId)),
     )
     .orderBy(desc(schema.item_events.created_at))
     .limit(limit * 3);
@@ -41,6 +38,14 @@ export async function listRecent(workspaceId: string, userId: string, limit = 40
       return row ? { p, row } : null;
     })
     .filter((x): x is { p: (typeof picked)[number]; row: (typeof itemRows)[number] } => x !== null);
-  const hydrated = await hydrate(workspaceId, userId, pairs.map((x) => x.row));
-  return pairs.map(({ p }, i) => ({ kind: p.kind, at: p.at, item: hydrated[i]! }));
+  const hydrated = await hydrate(
+    workspaceId,
+    userId,
+    pairs.map((x) => x.row),
+  );
+  return pairs.map(({ p }, i) => {
+    const item = hydrated[i];
+    if (!item) throw new Error('recent item hydration returned fewer rows than requested');
+    return { kind: p.kind, at: p.at, item };
+  });
 }

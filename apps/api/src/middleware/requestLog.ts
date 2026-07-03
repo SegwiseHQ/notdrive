@@ -1,7 +1,7 @@
 import type { MiddlewareHandler } from 'hono';
 import { nanoid } from 'nanoid';
-import { logger } from '../util/logger.js';
 import type { Variables } from '../context.js';
+import { logger } from '../util/logger.js';
 
 export const requestLog: MiddlewareHandler<{ Variables: Variables }> = async (c, next) => {
   const id = c.req.header('x-request-id') ?? nanoid(12);

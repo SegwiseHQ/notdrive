@@ -6,10 +6,10 @@ import { useHotkeysGlobal } from './commands/hotkeys.js';
 import { http } from './lib/http.js';
 import { useUi, useWorkspace } from './lib/store.js';
 import { useApplyTheme } from './lib/theme.js';
+import { cn } from './lib/utils.js';
 import { BulkActionBar } from './panes/BulkActionBar.js';
 import { Sidebar } from './panes/Sidebar.js';
 import { SidebarResizer } from './panes/SidebarResizer.js';
-import { cn } from './lib/utils.js';
 
 export function AppShell() {
   useApplyTheme();
@@ -26,7 +26,11 @@ export function AppShell() {
   }, [wsId, setActiveWs]);
 
   if (meQuery.isLoading) {
-    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>;
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Loading…
+      </div>
+    );
   }
   if (meQuery.isError) return <Navigate to="/login" replace />;
 
@@ -34,7 +38,10 @@ export function AppShell() {
   if (!me) return <Navigate to="/login" replace />;
   if (!wsId) {
     const defaultWs = me.workspaces[0];
-    if (!defaultWs) return <div className="p-8 text-muted-foreground">Something went wrong. Log out and retry.</div>;
+    if (!defaultWs)
+      return (
+        <div className="p-8 text-muted-foreground">Something went wrong. Log out and retry.</div>
+      );
     // Declarative redirect — calling navigate() during render fires a setState
     // on the RouterProvider mid-render and triggers a React warning.
     return <Navigate to={`/w/${defaultWs.id}`} replace />;
