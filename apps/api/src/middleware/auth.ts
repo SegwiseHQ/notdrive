@@ -5,12 +5,17 @@ import type { Variables } from '../context.js';
 import { db, schema } from '../db/index.js';
 import { unauthorized } from '../util/errors.js';
 import { now } from '../util/ids.js';
+import { logger } from '../util/logger.js';
 
 export const SESSION_COOKIE = 'sid';
 
 export const requireAuth: MiddlewareHandler<{ Variables: Variables }> = async (c, next) => {
   const sid = getCookie(c, SESSION_COOKIE);
-  if (!sid) throw unauthorized('no session');
+  const reqId = c.get('requestId');
+  if (!sid) {
+    logger.warn({ reqId, path: c.req.path }, 'auth failed: missing session cookie');
+    throw unauthorized('no session');
+  }
 
   const ts = now();
   const row = await db
@@ -29,7 +34,17 @@ export const requireAuth: MiddlewareHandler<{ Variables: Variables }> = async (c
     .limit(1);
 
   const r = row[0];
-  if (!r || r.expires_at < ts) throw unauthorized('session invalid or expired');
+  if (!r) {
+    logger.warn({ reqId, path: c.req.path }, 'auth failed: session row not found');
+    throw unauthorized('session invalid');
+  }
+  if (r.expires_at < ts) {
+    logger.warn(
+      { reqId, path: c.req.path, expiredMs: ts - r.expires_at },
+      'auth failed: session expired',
+    );
+    throw unauthorized('session expired');
+  }
 
   // Touch session (non-blocking)
   void db
