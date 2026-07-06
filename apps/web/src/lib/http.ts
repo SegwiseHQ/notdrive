@@ -18,6 +18,21 @@ import { apiOrigin } from './api.js';
  * narrow far enough (mostly due to zValidator generics).
  */
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly statusText: string,
+    public readonly body: string,
+  ) {
+    super(`${status} ${statusText}: ${body}`);
+    this.name = 'ApiError';
+  }
+}
+
+export function isApiError(error: unknown): error is ApiError {
+  return error instanceof ApiError;
+}
+
 function resolveWorkspaceId(): string | null {
   const match = /\/w\/([^/?#]+)/.exec(window.location.pathname);
   if (match?.[1]) return match[1];
@@ -36,7 +51,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}: ${body}`);
+    throw new ApiError(res.status, res.statusText, body);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
