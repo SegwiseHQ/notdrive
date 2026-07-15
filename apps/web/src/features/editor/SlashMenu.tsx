@@ -17,6 +17,7 @@ import {
 import { forwardRef, useImperativeHandle, useState } from 'react';
 import { toast } from 'sonner';
 import { http } from '../../lib/http.js';
+import { resolveItemAssetUrl } from '../../lib/itemAssets.js';
 
 export interface SlashItem {
   title: string;
@@ -148,10 +149,13 @@ export const SLASH_ITEMS: SlashItem[] = [
         const uploadingId = toast.loading('Uploading image…');
         try {
           const { url } = await http.uploadItemAsset(itemId, file);
-          // Insert as a relative URL. The frontend (Vite dev / Amplify prod)
-          // proxies /item-assets/* to the API origin — same approach used by
-          // the importer so HTML stays portable across deployments.
-          editor.chain().focus().setImage({ src: url }).run();
+          // The API returns a portable relative URL; render it from the API
+          // origin because production web hosting does not proxy asset paths.
+          editor
+            .chain()
+            .focus()
+            .setImage({ src: resolveItemAssetUrl(url) })
+            .run();
           toast.success('Image inserted', { id: uploadingId });
         } catch (err) {
           toast.error(`Upload failed: ${(err as Error).message}`, { id: uploadingId });
