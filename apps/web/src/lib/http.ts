@@ -10,7 +10,7 @@ import type {
   TagDTO,
   ViewDTO,
 } from '@notdrive/shared';
-import { apiOrigin } from './api.js';
+import { apiOrigin, requestHeaders } from './api.js';
 
 /**
  * Thin typed fetch helpers colocated with the Hono client. Prefer these over
@@ -33,16 +33,8 @@ export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }
 
-function resolveWorkspaceId(): string | null {
-  const match = /\/w\/([^/?#]+)/.exec(window.location.pathname);
-  if (match?.[1]) return match[1];
-  return localStorage.getItem('notdrive.workspace_id');
-}
-
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const wsId = resolveWorkspaceId();
-  const headers = new Headers(init?.headers);
-  if (wsId) headers.set('x-workspace-id', wsId);
+  const headers = requestHeaders(init?.headers, init?.method);
   if (init?.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
   const res = await fetch(`${apiOrigin()}${path}`, {
     credentials: 'include',
@@ -252,9 +244,7 @@ export const http = {
     const form = new FormData();
     form.append('file', file);
     if (opts.private) form.append('private', 'true');
-    const wsId = localStorage.getItem('notdrive.workspace_id') ?? undefined;
-    const headers = new Headers();
-    if (wsId) headers.set('x-workspace-id', wsId);
+    const headers = requestHeaders(undefined, 'POST');
     const res = await fetch(`${apiOrigin()}/import/zip`, {
       method: 'POST',
       credentials: 'include',
@@ -277,9 +267,7 @@ export const http = {
   uploadItemAsset: async (itemId: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    const wsId = localStorage.getItem('notdrive.workspace_id') ?? undefined;
-    const headers = new Headers();
-    if (wsId) headers.set('x-workspace-id', wsId);
+    const headers = requestHeaders(undefined, 'POST');
     const res = await fetch(`${apiOrigin()}/items/${encodeURIComponent(itemId)}/assets`, {
       method: 'POST',
       credentials: 'include',
