@@ -7,6 +7,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { common, createLowlight } from 'lowlight';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { makeItemAssetUrlsPortable, resolveItemAssetUrls } from '../../lib/itemAssets.js';
 import { BubbleToolbar } from './BubbleToolbar.js';
 import { CommentMark } from './CommentMark.js';
 import type { MentionItem } from './MentionMenu.js';
@@ -128,8 +129,8 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
           spellcheck: 'false',
         },
       }),
-      // Allow inline images. The /image slash command uploads via the API
-      // and inserts an <img src="/item-assets/:id"> node here.
+      // Allow inline images. API-hosted asset URLs are resolved before TipTap
+      // receives the HTML so they work when web and API use separate origins.
       Image.configure({
         inline: false,
         allowBase64: false,
@@ -147,7 +148,7 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
       buildMentionExtension(() => membersRef.current),
       CommentMark,
     ],
-    content: initialBody ?? '',
+    content: resolveItemAssetUrls(initialBody ?? ''),
     editorProps: {
       attributes: {
         class:
@@ -167,7 +168,7 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
       },
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      onChange(makeItemAssetUrlsPortable(editor.getHTML()));
     },
   });
 
@@ -177,7 +178,7 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
       setBody: (html: string) => {
         // setContent triggers onUpdate by default; pass `false` so we don't
         // immediately fire a save with the just-loaded server content.
-        editor?.commands.setContent(html, false);
+        editor?.commands.setContent(resolveItemAssetUrls(html), false);
       },
       applyCommentMark: (from: number, to: number, threadId: string) => {
         if (!editor) return;
