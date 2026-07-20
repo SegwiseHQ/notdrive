@@ -11,6 +11,7 @@ import { makeItemAssetUrlsPortable, resolveItemAssetUrls } from '../../lib/itemA
 import { BubbleToolbar } from './BubbleToolbar.js';
 import { CommentMark } from './CommentMark.js';
 import type { MentionItem } from './MentionMenu.js';
+import { EmojiSuggestion } from './emojiSuggestion.js';
 import { buildMentionExtension } from './mentionExtension.js';
 import { SlashCommand } from './slashCommand.js';
 
@@ -145,6 +146,7 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
         },
       }),
       SlashCommand.configure({ itemId }),
+      EmojiSuggestion,
       buildMentionExtension(() => membersRef.current),
       CommentMark,
     ],
