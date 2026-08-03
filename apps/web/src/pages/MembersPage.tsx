@@ -1,7 +1,7 @@
 import type { AutoShareMode, DriveRoleLiteral } from '@notdrive/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { toast } from 'sonner';
 import { http } from '../lib/http.js';
 

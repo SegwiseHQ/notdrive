@@ -2,7 +2,7 @@ import { TAG_COLORS } from '@notdrive/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { http } from '../../lib/http.js';
 
 const colorClass: Record<string, string> = {

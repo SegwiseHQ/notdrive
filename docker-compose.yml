@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18.4-alpine3.24
     restart: unless-stopped
     environment:
       POSTGRES_USER: notdrive
@@ -9,15 +9,16 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata18:/var/lib/postgresql
     profiles: ['pg']
 
   mailhog:
-    image: mailhog/mailhog:latest
+    # Post-v1.30 security fixes, pinned to the scanned multi-platform edge snapshot.
+    image: axllent/mailpit@sha256:bccf2e68cfe67695cd6ed4d73e9def6100ea48a262901b1945befbed91cceec7
     restart: unless-stopped
     ports:
       - '1025:1025'
       - '8025:8025'
 
 volumes:
-  pgdata:
+  pgdata18:

@@ -2,7 +2,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, MoreHorizontal, Share2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { ShareDialog } from '../features/share/ShareDialog.js';
 import { http } from '../lib/http.js';

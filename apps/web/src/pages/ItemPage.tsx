@@ -15,7 +15,7 @@ import {
   Unlink,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { CommentsPanel } from '../features/comments/CommentsPanel.js';
 import { DrivePicker } from '../features/drive-picker/DrivePicker.js';

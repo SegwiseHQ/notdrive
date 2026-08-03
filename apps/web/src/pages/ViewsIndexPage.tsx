@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { ViewsList } from '../features/views/ViewsList.js';
 
 export function ViewsIndexPage() {

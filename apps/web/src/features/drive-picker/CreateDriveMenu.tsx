@@ -11,7 +11,7 @@ import {
   Sheet,
   SquarePen,
 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { http } from '../../lib/http.js';
 

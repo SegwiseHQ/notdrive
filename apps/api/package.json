@@ -20,17 +20,17 @@
     "jobs:run": "tsx src/jobs/cli.ts"
   },
   "dependencies": {
-    "@hono/node-server": "1.13.7",
+    "@hono/node-server": "2.0.12",
     "@hono/zod-validator": "0.4.2",
     "@notdrive/shared": "workspace:*",
-    "adm-zip": "0.5.16",
+    "adm-zip": "0.6.0",
     "better-sqlite3": "11.5.0",
     "bottleneck": "2.19.5",
     "dotenv": "16.4.7",
-    "drizzle-orm": "0.36.4",
-    "google-auth-library": "9.15.1",
-    "googleapis": "144.0.0",
-    "hono": "4.6.13",
+    "drizzle-orm": "0.45.2",
+    "google-auth-library": "11.0.0",
+    "googleapis": "173.0.0",
+    "hono": "4.12.34",
     "lru-cache": "11.0.2",
     "marked": "14.1.4",
     "nanoid": "5.0.9",
@@ -44,12 +44,12 @@
   "devDependencies": {
     "@types/adm-zip": "0.5.7",
     "@types/better-sqlite3": "7.6.12",
-    "@types/node": "22.10.1",
+    "@types/node": "24.13.3",
     "@types/pg": "8.11.10",
-    "drizzle-kit": "0.28.1",
-    "esbuild": "0.24.0",
-    "tsx": "4.19.2",
+    "drizzle-kit": "0.31.10",
+    "esbuild": "0.28.1",
+    "tsx": "4.23.5",
     "typescript": "5.7.2",
-    "vitest": "2.1.8"
+    "vitest": "4.1.10"
   }
 }

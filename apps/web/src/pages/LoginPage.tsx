@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { apiOrigin } from '../lib/api.js';
 
 export function LoginPage() {

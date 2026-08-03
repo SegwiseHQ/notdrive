@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { Navigate, Outlet, useParams } from 'react-router-dom';
+import { Navigate, Outlet, useParams } from 'react-router';
 import { CommandPalette } from './commands/CommandPalette.js';
 import { useHotkeysGlobal } from './commands/hotkeys.js';
 import { http, isApiError } from './lib/http.js';

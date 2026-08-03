@@ -1,5 +1,5 @@
 import type { ItemDTO } from '@notdrive/shared';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 
 const DAY = 86_400_000;
 function bucketOf(ms: number, now: number): string {

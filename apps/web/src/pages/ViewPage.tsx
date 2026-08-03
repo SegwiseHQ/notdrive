@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { http } from '../lib/http.js';
 import { ViewContainer } from '../views/ViewContainer.js';
 
