@@ -1,8 +1,8 @@
-import type { StatusCode } from 'hono/utils/http-status';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 export class HttpError extends Error {
   constructor(
-    public status: StatusCode,
+    public status: ContentfulStatusCode,
     message: string,
     public code = 'error',
     public details?: unknown,

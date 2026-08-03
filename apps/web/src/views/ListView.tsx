@@ -1,6 +1,6 @@
 import type { ItemDTO } from '@notdrive/shared';
 import { File as FileIcon, FileText } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { useSelection } from '../lib/store.js';
 
 export function ListView({ items }: { items: ItemDTO[]; parentId?: string }) {

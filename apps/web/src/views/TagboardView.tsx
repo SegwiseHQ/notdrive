@@ -1,6 +1,6 @@
 import type { ItemDTO } from '@notdrive/shared';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { http } from '../lib/http.js';
 
 export function TagboardView({ items }: { items: ItemDTO[] }) {

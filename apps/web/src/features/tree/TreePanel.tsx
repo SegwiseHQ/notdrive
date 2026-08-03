@@ -23,7 +23,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { http } from '../../lib/http.js';
 import { useNavigateToParent } from '../../lib/nav.js';

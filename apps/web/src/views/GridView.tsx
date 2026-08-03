@@ -1,5 +1,5 @@
 import type { ItemDTO } from '@notdrive/shared';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 
 export function GridView({ items }: { items: ItemDTO[] }) {
   const { wsId = '' } = useParams();

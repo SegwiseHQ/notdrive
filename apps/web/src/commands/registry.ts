@@ -1,6 +1,6 @@
 import type { DarkMode } from '@notdrive/shared';
 import type { QueryClient } from '@tanstack/react-query';
-import type { NavigateFunction } from 'react-router-dom';
+import type { NavigateFunction } from 'react-router';
 import { http } from '../lib/http.js';
 import { useSelection } from '../lib/store.js';
 

@@ -22,7 +22,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import { CreateDriveMenu } from '../features/drive-picker/CreateDriveMenu.js';
 import { NotificationBell } from '../features/notifications/NotificationBell.js';
 import { DriveTreePanel } from '../features/tree/DriveTreePanel.js';

@@ -6,14 +6,12 @@
 ############################
 # 1) Builder: bundle the api
 ############################
-FROM node:22-bookworm-slim AS builder
+FROM node:24.18.0-alpine3.24 AS builder
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     CI=1
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate \
- && apt-get update \
- && apt-get install -y --no-install-recommends python3 build-essential pkg-config ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate \
+ && apk add --no-cache python3 build-base pkgconf ca-certificates
 
 WORKDIR /app
 
@@ -34,14 +32,12 @@ RUN pnpm --filter @notdrive/api build
 ###################################################
 # 2) Deps: production-only install for native deps
 ###################################################
-FROM node:22-bookworm-slim AS deps
+FROM node:24.18.0-alpine3.24 AS deps
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     CI=1
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate \
- && apt-get update \
- && apt-get install -y --no-install-recommends python3 build-essential pkg-config ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate \
+ && apk add --no-cache python3 build-base pkgconf ca-certificates
 
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
@@ -55,37 +51,45 @@ RUN pnpm install --frozen-lockfile --prod --filter @notdrive/api
 #######################
 # 3) Runtime: slim image
 #######################
-FROM node:22-bookworm-slim AS runtime
+FROM node:24.18.0-alpine3.24 AS runtime
 ENV NODE_ENV=production \
     PORT=3000
 
 # tini gives us proper PID 1 signal handling (SIGTERM -> graceful shutdown).
-RUN apt-get update \
- && apt-get install -y --no-install-recommends tini ca-certificates curl \
- && rm -rf /var/lib/apt/lists/* \
- && groupadd -r app && useradd -r -g app -d /app -s /usr/sbin/nologin app
+RUN apk add --no-cache tini ca-certificates curl \
+ && addgroup -S app \
+ && adduser -S -D -H -G app -h /app -s /sbin/nologin app \
+ && rm -rf /usr/local/lib/node_modules/npm \
+    /usr/local/lib/node_modules/corepack \
+    /opt/yarn-v1.22.22 \
+ && rm -f /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/bin/corepack \
+    /usr/local/bin/pnpm \
+    /usr/local/bin/pnpx \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg
 
 # Mirror the workspace layout so pnpm's relative symlinks under
 # apps/api/node_modules/ still resolve to /app/node_modules/.pnpm/...
 WORKDIR /app/apps/api
 
 # Workspace store (the actual package files live here under .pnpm/).
-COPY --from=deps /app/node_modules /app/node_modules
+COPY --chown=app:app --from=deps /app/node_modules /app/node_modules
 # Per-workspace symlinks for @notdrive/api's deps (better-sqlite3, pg, etc.).
-COPY --from=deps /app/apps/api/node_modules /app/apps/api/node_modules
+COPY --chown=app:app --from=deps /app/apps/api/node_modules /app/apps/api/node_modules
 
 # Bundle output + migration SQL files.
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/drizzle ./drizzle
+COPY --chown=app:app --from=builder /app/apps/api/dist ./dist
+COPY --chown=app:app --from=builder /app/apps/api/drizzle ./drizzle
 
 # Root .env baked into the image. dotenv in env.ts walks up from dist/ and
 # picks up /app/.env. WARNING: this embeds secrets in the image — only push
 # this image to private registries you trust.
-COPY .env /app/.env
+COPY --chown=app:app .env /app/.env
 
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
- && chown -R app:app /app
+COPY --chown=app:app docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER app
 EXPOSE 3000
@@ -94,5 +98,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fsS "http://127.0.0.1:${PORT:-3000}/health" || exit 1
 
-ENTRYPOINT ["/usr/bin/tini", "--", "docker-entrypoint.sh"]
+ENTRYPOINT ["/sbin/tini", "--", "docker-entrypoint.sh"]
 CMD ["node", "dist/index.js"]

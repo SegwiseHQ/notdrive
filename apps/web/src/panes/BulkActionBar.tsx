@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2, X } from 'lucide-react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { http } from '../lib/http.js';
 import { useBulk } from '../lib/store.js';

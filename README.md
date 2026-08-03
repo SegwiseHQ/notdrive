@@ -70,14 +70,14 @@ NotDrive sits on top of your Google Drive and gives you the things Drive doesn't
 | Layer | Choice | Why |
 |---|---|---|
 | Monorepo | pnpm workspaces | Two apps + shared types, minimal tooling. |
-| Runtime | Node 22 LTS | Pinned via Volta/.nvmrc. |
+| Runtime | Node 24 LTS | Pinned via Volta/.nvmrc. |
 | API framework | [Hono](https://hono.dev) | Tiny, fast, RPC types flow to client without codegen. |
 | Validation | [Zod](https://zod.dev) | Schemas shared between API + web via `packages/shared`. |
 | ORM | [Drizzle](https://orm.drizzle.team) | SQL-first, strong types, works on SQLite + Postgres from one codebase. |
 | Database | SQLite (dev) / Postgres (prod) | Toggle via `DB_DRIVER`. Same service code. |
 | Search | SQLite FTS5 / Postgres tsvector | HTML-stripped body + title weighted index. |
 | Auth | Google OAuth 2.0 + AES-GCM token storage | Sessions stored server-side, revocable. |
-| Frontend | Vite + React 18 + TanStack Query | Fast HMR, server-state cache. |
+| Frontend | Vite + React 19 + TanStack Query | Fast HMR, server-state cache. |
 | UI primitives | Radix UI + Tailwind + shadcn/ui patterns | Headless components, design control. |
 | Editor | TipTap | Extensible rich-text + slash menu. |
 | DnD | dnd-kit | Sidebar drag-reorder. |
@@ -89,8 +89,8 @@ NotDrive sits on top of your Google Drive and gives you the things Drive doesn't
 
 ### Prerequisites
 
-- Node 22 (`volta install node@22` or `nvm install 22`)
-- pnpm 9 (`corepack enable && corepack prepare pnpm@9.12.0 --activate`)
+- Node 24 (`volta install node@24.18.0` or `nvm install 24.18.0`)
+- pnpm 9 (`corepack enable && corepack prepare pnpm@9.15.9 --activate`)
 - A Google Cloud project with OAuth credentials (see [Google OAuth setup](#google-oauth-setup) below)
 
 ### Setup
@@ -377,7 +377,7 @@ notdrive/
 │           ├── lib/            HTTP client, hooks, stores (zustand)
 │           └── components/     Shared UI primitives
 ├── packages/shared/            Cross-app types + zod schemas + fractional-rank helper
-├── docker-compose.yml          Local Postgres + mailhog
+├── docker-compose.yml          Local Postgres + Mailpit
 ├── Dockerfile                  Multi-stage prod build
 ├── docker-entrypoint.sh        Migration + start
 ├── DESIGN.md                   Detailed architecture + decision log

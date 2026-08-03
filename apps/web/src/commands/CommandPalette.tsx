@@ -2,7 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Command } from 'cmdk';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { useDebounced } from '../lib/hooks.js';
 import { http } from '../lib/http.js';

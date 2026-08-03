@@ -2,7 +2,7 @@ import type { MeDTO } from '@notdrive/shared';
 import * as Popover from '@radix-ui/react-popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { useWorkspace } from '../../lib/store.js';
 
 /**

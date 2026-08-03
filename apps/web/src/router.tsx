@@ -1,4 +1,4 @@
-import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { Navigate, createBrowserRouter } from 'react-router';
 import { AppShell } from './AppShell.js';
 import { AcceptInvitePage } from './pages/AcceptInvitePage.js';
 import { ArchivePage } from './pages/ArchivePage.js';

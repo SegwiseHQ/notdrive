@@ -43,7 +43,7 @@ The product goal is <5 s file retrieval and a Notion-feel UX. All three TRD phas
 - `tsconfig.base.json` enables `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `noFallthroughCasesInSwitch`, `isolatedModules`, `verbatimModuleSyntax: false`.
 - Strict mode catches the biggest classes of bugs in a Drive-wrapper app (missing fields on API responses, nullable joins).
 
-### 3.3 Runtime — **Node 22 LTS, pinned via Volta + nvmrc**
+### 3.3 Runtime — **Node 24 LTS, pinned via Volta + nvmrc**
 - `@hono/node-server` hosts Hono on Node. Bun was rejected to avoid platform quirks with `googleapis` and `better-sqlite3`.
 
 ### 3.4 API framework — **Hono**
@@ -56,7 +56,7 @@ The product goal is <5 s file retrieval and a Notion-feel UX. All three TRD phas
 
 ### 3.6 Database — **SQLite in dev, Postgres in prod**
 - SQLite for zero-setup dev (`better-sqlite3`, WAL mode, foreign keys ON).
-- Postgres 16 via `docker-compose --profile pg` for prod parity tests.
+- Postgres 18.4 via `docker-compose --profile pg` for prod parity tests.
 - Toggle with `DB_DRIVER=sqlite|postgres` + `DATABASE_URL`.
 - All timestamps are `unix-ms` integers on both sides to keep services portable.
 
@@ -453,12 +453,12 @@ Run from the repo root.
 
 | Service | Profile | Why |
 | --- | --- | --- |
-| `postgres` (16-alpine) | `pg` | Prod-shape DB for parity testing; exposed on `:5432` (`notdrive`/`notdrive`). |
-| `mailhog` | default | Captures invite emails locally at `http://localhost:8025` (UI) / `:1025` SMTP. |
+| `postgres` (18.4-alpine) | `pg` | Prod-shape DB for parity testing; exposed on `:5432` (`notdrive`/`notdrive`). |
+| `mailhog` | default | Runs Mailpit to capture invite emails locally at `http://localhost:8025` (UI) / `:1025` SMTP. |
 
 Useful commands:
 ```bash
-docker compose up -d mailhog              # always-on local SMTP
+docker compose up -d mailhog              # always-on local SMTP via Mailpit
 docker compose --profile pg up -d postgres  # opt-in Postgres
 docker compose logs -f postgres           # tail logs
 docker compose --profile pg down          # stop PG
