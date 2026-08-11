@@ -1,7 +1,9 @@
-import type { ItemDTO, ViewLayout } from '@notdrive/shared';
+import { type ItemDTO, type ViewLayout, sortItems } from '@notdrive/shared';
 import { Grid3x3, LayoutGrid, List, Rows3 } from 'lucide-react';
 import { useState } from 'react';
+import { SortMenu } from '../features/sorting/SortMenu.js';
 import { useDocumentTitle } from '../lib/documentTitle.js';
+import { useUi } from '../lib/store.js';
 import { cn } from '../lib/utils.js';
 import { GridView } from './GridView.js';
 import { ListView } from './ListView.js';
@@ -31,6 +33,9 @@ export function ViewContainer({
   defaultLayout?: ViewLayout;
 }) {
   const [layout, setLayout] = useState<ViewLayout>(defaultLayout);
+  const pageSort = useUi((state) => state.pageSort);
+  const setPageSort = useUi((state) => state.setPageSort);
+  const sortedItems = sortItems(items, pageSort);
   // Covers every route that renders through here — workspace home, favorites,
   // saved views, tag pages — so each gets its heading in the tab.
   useDocumentTitle(title);
@@ -42,26 +47,29 @@ export function ViewContainer({
           <h1 className="truncate text-3xl font-semibold tracking-tight">{title}</h1>
           {subtitle && <p className="mt-1 truncate text-sm text-muted-foreground">{subtitle}</p>}
         </div>
-        <div className="flex items-center gap-0.5 rounded-md bg-muted/60 p-0.5">
-          {(['list', 'grid', 'timeline', 'tagboard'] as const).map((l) => {
-            const Icon = ICON[l];
-            return (
-              <button
-                type="button"
-                key={l}
-                onClick={() => setLayout(l)}
-                className={cn(
-                  'rounded p-1.5 text-muted-foreground transition',
-                  layout === l
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'hover:text-foreground',
-                )}
-                title={l}
-              >
-                <Icon className="size-3.5" />
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <SortMenu value={pageSort} onChange={setPageSort} showLabel />
+          <div className="flex items-center gap-0.5 rounded-md bg-muted/60 p-0.5">
+            {(['list', 'grid', 'timeline', 'tagboard'] as const).map((l) => {
+              const Icon = ICON[l];
+              return (
+                <button
+                  type="button"
+                  key={l}
+                  onClick={() => setLayout(l)}
+                  className={cn(
+                    'rounded p-1.5 text-muted-foreground transition',
+                    layout === l
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'hover:text-foreground',
+                  )}
+                  title={l}
+                >
+                  <Icon className="size-3.5" />
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -74,10 +82,10 @@ export function ViewContainer({
         )}
         {!loading && items.length > 0 && (
           <>
-            {layout === 'list' && <ListView items={items} parentId={parentId} />}
-            {layout === 'grid' && <GridView items={items} />}
-            {layout === 'timeline' && <TimelineView items={items} />}
-            {layout === 'tagboard' && <TagboardView items={items} />}
+            {layout === 'list' && <ListView items={sortedItems} parentId={parentId} />}
+            {layout === 'grid' && <GridView items={sortedItems} />}
+            {layout === 'timeline' && <TimelineView items={sortedItems} />}
+            {layout === 'tagboard' && <TagboardView items={sortedItems} />}
           </>
         )}
       </div>

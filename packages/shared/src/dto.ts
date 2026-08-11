@@ -84,15 +84,37 @@ export interface DriveTreeNode {
   children: DriveTreeNode[] | null;
 }
 
-export function sortDriveNodes(list: DriveTreeNode[]): DriveTreeNode[] {
+export type ContentSort = 'alphabetical' | 'modified';
+
+function compareNames(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
+}
+
+export function compareDriveNodes(
+  a: DriveTreeNode,
+  b: DriveTreeNode,
+  sort: ContentSort = 'modified',
+): number {
+  if (sort === 'modified' && a.modified_time !== b.modified_time) {
+    if (a.modified_time === null) return 1;
+    if (b.modified_time === null) return -1;
+    return b.modified_time - a.modified_time;
+  }
+  if (a.is_folder !== b.is_folder) return a.is_folder ? -1 : 1;
+  return compareNames(a.name, b.name);
+}
+
+export function sortDriveNodes(
+  list: DriveTreeNode[],
+  sort: ContentSort = 'modified',
+): DriveTreeNode[] {
+  return [...list].sort((a, b) => compareDriveNodes(a, b, sort));
+}
+
+export function sortItems(list: ItemDTO[], sort: ContentSort = 'modified'): ItemDTO[] {
   return [...list].sort((a, b) => {
-    if (a.modified_time !== b.modified_time) {
-      if (a.modified_time === null) return 1;
-      if (b.modified_time === null) return -1;
-      return b.modified_time - a.modified_time;
-    }
-    if (a.is_folder !== b.is_folder) return a.is_folder ? -1 : 1;
-    return a.name.localeCompare(b.name);
+    if (sort === 'modified' && a.updated_at !== b.updated_at) return b.updated_at - a.updated_at;
+    return compareNames(a.title || 'Untitled', b.title || 'Untitled');
   });
 }
 
