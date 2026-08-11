@@ -3,6 +3,7 @@ import { FileArchive, Lock, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 
 interface ImportResult {
@@ -14,6 +15,7 @@ interface ImportResult {
 
 export function ImportPage() {
   const qc = useQueryClient();
+  useDocumentTitle('Import');
   const navigate = useNavigate();
   const { wsId = '' } = useParams();
   const [file, setFile] = useState<File | null>(null);

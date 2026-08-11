@@ -3,10 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useParams } from 'react-router';
 import { toast } from 'sonner';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 
 export function MembersPage() {
   const { wsId = '' } = useParams();
+  useDocumentTitle('People');
   const qc = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: http.me });
   const membersQuery = useQuery({

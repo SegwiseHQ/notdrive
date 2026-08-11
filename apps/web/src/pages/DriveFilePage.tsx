@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { ShareDialog } from '../features/share/ShareDialog.js';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 
 /**
@@ -25,6 +26,7 @@ export function DriveFilePage() {
 
   const file = fileQuery.data;
   const webViewLink = file?.web_view_link ?? null;
+  useDocumentTitle(file?.name);
 
   return (
     <div className="mx-auto flex min-h-0 w-full flex-1 flex-col px-8 py-8">

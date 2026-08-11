@@ -1,8 +1,10 @@
 import { useParams } from 'react-router';
 import { ViewsList } from '../features/views/ViewsList.js';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 
 export function ViewsIndexPage() {
   const { wsId = '' } = useParams();
+  useDocumentTitle('Views');
   return (
     <div className="mx-auto w-full max-w-[880px] px-12 py-10">
       <h1 className="text-3xl font-semibold tracking-tight">Views</h1>

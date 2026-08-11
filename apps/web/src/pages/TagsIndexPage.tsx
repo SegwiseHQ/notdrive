@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { TagList } from '../features/tags/TagList.js';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 
 export function TagsIndexPage() {
   const { wsId = '' } = useParams();
+  useDocumentTitle('Tags');
   const tags = useQuery({ queryKey: ['tags', wsId], queryFn: http.listTags });
 
   return (

@@ -1,6 +1,7 @@
 import type { ItemDTO, ViewLayout } from '@notdrive/shared';
 import { Grid3x3, LayoutGrid, List, Rows3 } from 'lucide-react';
 import { useState } from 'react';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { cn } from '../lib/utils.js';
 import { GridView } from './GridView.js';
 import { ListView } from './ListView.js';
@@ -30,6 +31,9 @@ export function ViewContainer({
   defaultLayout?: ViewLayout;
 }) {
   const [layout, setLayout] = useState<ViewLayout>(defaultLayout);
+  // Covers every route that renders through here — workspace home, favorites,
+  // saved views, tag pages — so each gets its heading in the tab.
+  useDocumentTitle(title);
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-12 py-10">

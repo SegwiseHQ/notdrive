@@ -17,6 +17,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { CreateDriveMenu } from '../features/drive-picker/CreateDriveMenu.js';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 import { cn } from '../lib/utils.js';
 
@@ -84,6 +85,7 @@ export function DrivePage() {
   }, [tree.data, pathIds]);
 
   const currentFolder = trail[trail.length - 1] ?? tree.data;
+  useDocumentTitle(currentFolder?.name ?? 'My Drive');
   const needle = q.trim().toLowerCase();
   const searching = needle.length > 0;
 

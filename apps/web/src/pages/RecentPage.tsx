@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 
 export function RecentPage() {
   const { wsId = '' } = useParams();
+  useDocumentTitle('Recent');
   const recent = useQuery({ queryKey: ['recent', wsId], queryFn: http.recent });
   return (
     <div className="p-6">
