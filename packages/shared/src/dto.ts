@@ -86,6 +86,11 @@ export interface DriveTreeNode {
 
 export function sortDriveNodes(list: DriveTreeNode[]): DriveTreeNode[] {
   return [...list].sort((a, b) => {
+    if (a.modified_time !== b.modified_time) {
+      if (a.modified_time === null) return 1;
+      if (b.modified_time === null) return -1;
+      return b.modified_time - a.modified_time;
+    }
     if (a.is_folder !== b.is_folder) return a.is_folder ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
