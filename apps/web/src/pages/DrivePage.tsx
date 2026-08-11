@@ -1,4 +1,9 @@
-import { type DriveTreeNode, type ItemDTO, sortDriveNodes } from '@notdrive/shared';
+import {
+  type DriveTreeNode,
+  type ItemDTO,
+  compareDriveNodes,
+  sortDriveNodes,
+} from '@notdrive/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronRight,
@@ -17,8 +22,10 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { CreateDriveMenu } from '../features/drive-picker/CreateDriveMenu.js';
+import { SortMenu } from '../features/sorting/SortMenu.js';
 import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
+import { useUi } from '../lib/store.js';
 import { cn } from '../lib/utils.js';
 
 type Layout = 'list' | 'grid';
@@ -30,6 +37,8 @@ export function DrivePage() {
   const [params, setParams] = useSearchParams();
   const [layout, setLayout] = useState<Layout>('list');
   const [q, setQ] = useState('');
+  const driveSort = useUi((state) => state.driveSort);
+  const setDriveSort = useUi((state) => state.setDriveSort);
 
   const tree = useQuery({
     queryKey: ['drive-tree'],
@@ -104,13 +113,8 @@ export function DrivePage() {
       }
     };
     walk(tree.data, []);
-    return out
-      .sort((a, b) => {
-        if (a.node.is_folder !== b.node.is_folder) return a.node.is_folder ? -1 : 1;
-        return a.node.name.localeCompare(b.node.name);
-      })
-      .slice(0, 200);
-  }, [tree.data, needle, searching]);
+    return out.sort((a, b) => compareDriveNodes(a.node, b.node, driveSort)).slice(0, 200);
+  }, [tree.data, needle, searching, driveSort]);
 
   // Server-side Drive search reaches files below the cached depth. Debounced
   // by TanStack's enabled gate + the 300ms key churn.
@@ -127,13 +131,15 @@ export function DrivePage() {
     const remote = (remoteSearch.data ?? [])
       .filter((n) => !seen.has(n.id))
       .map((n) => ({ node: n, path: [] }));
-    return [...localMatches, ...remote];
-  }, [localMatches, remoteSearch.data, searching]);
+    return [...localMatches, ...remote].sort((a, b) =>
+      compareDriveNodes(a.node, b.node, driveSort),
+    );
+  }, [localMatches, remoteSearch.data, searching, driveSort]);
 
   const children = useMemo(() => {
     if (!currentFolder?.children) return [] as DriveTreeNode[];
-    return sortDriveNodes(currentFolder.children);
-  }, [currentFolder]);
+    return sortDriveNodes(currentFolder.children, driveSort);
+  }, [currentFolder, driveSort]);
 
   const sync = useMutation({
     mutationFn: () => http.driveSync(),
@@ -205,6 +211,7 @@ export function DrivePage() {
               className="w-40 bg-transparent px-2 py-1 text-sm outline-none"
             />
           </div>
+          <SortMenu value={driveSort} onChange={setDriveSort} showLabel />
           <div className="flex items-center gap-0.5 rounded-md bg-muted/60 p-0.5">
             {(['list', 'grid'] as const).map((l) => {
               const Icon = l === 'list' ? List : LayoutGrid;

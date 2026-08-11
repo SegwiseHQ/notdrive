@@ -1,4 +1,9 @@
-import { type DriveTreeNode, type ItemDTO, sortDriveNodes } from '@notdrive/shared';
+import {
+  type ContentSort,
+  type DriveTreeNode,
+  type ItemDTO,
+  sortDriveNodes,
+} from '@notdrive/shared';
 import { useQuery } from '@tanstack/react-query';
 import {
   Check,
@@ -23,7 +28,7 @@ import { CreateDriveMenu } from '../drive-picker/CreateDriveMenu.js';
  *   - Click a file already linked → navigate to its NotDrive page.
  *   - Click the + on hover → promote a file to a NotDrive page (tags, favorites, hierarchy).
  */
-export function DriveTreePanel() {
+export function DriveTreePanel({ sort }: { sort: ContentSort }) {
   const tree = useQuery({
     queryKey: ['drive-tree'],
     queryFn: async () => {
@@ -71,8 +76,8 @@ export function DriveTreePanel() {
 
   return (
     <div className="flex flex-col">
-      {sortDriveNodes(tree.data.children).map((n) => (
-        <DriveRow key={n.id} node={n} depth={0} linkedMap={linkedMap} />
+      {sortDriveNodes(tree.data.children, sort).map((n) => (
+        <DriveRow key={n.id} node={n} depth={0} linkedMap={linkedMap} sort={sort} />
       ))}
     </div>
   );
@@ -82,10 +87,12 @@ function DriveRow({
   node,
   depth,
   linkedMap,
+  sort,
 }: {
   node: DriveTreeNode;
   depth: number;
   linkedMap: Map<string, ItemDTO>;
+  sort: ContentSort;
 }) {
   const { wsId = '' } = useParams();
   const navigate = useNavigate();
@@ -182,8 +189,8 @@ function DriveRow({
       </div>
       {expanded && node.children && (
         <div>
-          {sortDriveNodes(node.children).map((c) => (
-            <DriveRow key={c.id} node={c} depth={depth + 1} linkedMap={linkedMap} />
+          {sortDriveNodes(node.children, sort).map((c) => (
+            <DriveRow key={c.id} node={c} depth={depth + 1} linkedMap={linkedMap} sort={sort} />
           ))}
         </div>
       )}

@@ -1,12 +1,16 @@
-import type { DarkMode } from '@notdrive/shared';
+import type { ContentSort, DarkMode } from '@notdrive/shared';
 import { create } from 'zustand';
 
 interface UiState {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   darkOverride: DarkMode;
+  pageSort: ContentSort;
+  driveSort: ContentSort;
   toggleSidebar: () => void;
   setDark: (m: DarkMode) => void;
+  setPageSort: (sort: ContentSort) => void;
+  setDriveSort: (sort: ContentSort) => void;
   setSidebarWidth: (w: number) => void;
 }
 
@@ -18,14 +22,28 @@ const initialSidebarWidth = (() => {
   return Math.min(SIDEBAR_LIMITS.MAX, Math.max(SIDEBAR_LIMITS.MIN, raw));
 })();
 
+function storedSort(key: string): ContentSort {
+  return localStorage.getItem(key) === 'alphabetical' ? 'alphabetical' : 'modified';
+}
+
 export const useUi = create<UiState>((set) => ({
   sidebarCollapsed: false,
   sidebarWidth: initialSidebarWidth,
   darkOverride: (localStorage.getItem('notdrive.dark') as DarkMode) ?? 'system',
+  pageSort: storedSort('notdrive.page_sort'),
+  driveSort: storedSort('notdrive.drive_sort'),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setDark: (m) => {
     localStorage.setItem('notdrive.dark', m);
     set({ darkOverride: m });
+  },
+  setPageSort: (sort) => {
+    localStorage.setItem('notdrive.page_sort', sort);
+    set({ pageSort: sort });
+  },
+  setDriveSort: (sort) => {
+    localStorage.setItem('notdrive.drive_sort', sort);
+    set({ driveSort: sort });
   },
   setSidebarWidth: (w) => {
     const clamped = Math.min(SIDEBAR_LIMITS.MAX, Math.max(SIDEBAR_LIMITS.MIN, Math.round(w)));

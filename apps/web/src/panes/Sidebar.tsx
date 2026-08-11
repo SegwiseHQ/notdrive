@@ -25,6 +25,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { CreateDriveMenu } from '../features/drive-picker/CreateDriveMenu.js';
 import { NotificationBell } from '../features/notifications/NotificationBell.js';
+import { SortMenu } from '../features/sorting/SortMenu.js';
 import { DriveTreePanel } from '../features/tree/DriveTreePanel.js';
 import { TreePanel } from '../features/tree/TreePanel.js';
 import { WorkspaceSwitcher } from '../features/workspaces/WorkspaceSwitcher.js';
@@ -38,6 +39,10 @@ export function Sidebar({ me }: { me: MeDTO }) {
   const qc = useQueryClient();
   const [pagesOpen, setPagesOpen] = useState(true);
   const [driveOpen, setDriveOpen] = useState(localStorage.getItem('notdrive.drive-open') !== '0');
+  const pageSort = useUi((state) => state.pageSort);
+  const setPageSort = useUi((state) => state.setPageSort);
+  const driveSort = useUi((state) => state.driveSort);
+  const setDriveSort = useUi((state) => state.setDriveSort);
 
   const favoritesQuery = useQuery({
     queryKey: ['items', wsId, 'favorites'],
@@ -89,22 +94,25 @@ export function Sidebar({ me }: { me: MeDTO }) {
           open={pagesOpen}
           setOpen={setPagesOpen}
           right={
-            <button
-              type="button"
-              onClick={async (e) => {
-                e.stopPropagation();
-                const it = await http.createItem({ title: 'Untitled', parent_id: null });
-                await qc.invalidateQueries({ queryKey: ['items', wsId] });
-                navigate(`/w/${wsId}/i/${it.id}`);
-              }}
-              className="rounded p-0.5 text-muted-foreground transition hover:bg-background"
-              title="New page (⌘N)"
-            >
-              <Plus className="size-3.5" />
-            </button>
+            <div className="flex items-center gap-0.5">
+              <SortMenu value={pageSort} onChange={setPageSort} />
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const it = await http.createItem({ title: 'Untitled', parent_id: null });
+                  await qc.invalidateQueries({ queryKey: ['items', wsId] });
+                  navigate(`/w/${wsId}/i/${it.id}`);
+                }}
+                className="rounded p-0.5 text-muted-foreground transition hover:bg-background"
+                title="New page (⌘N)"
+              >
+                <Plus className="size-3.5" />
+              </button>
+            </div>
           }
         />
-        {pagesOpen && <TreePanel wsId={wsId} />}
+        {pagesOpen && <TreePanel wsId={wsId} sort={pageSort} />}
 
         {/* Drive — same tree shape, rendered inline */}
         <SectionHeader
@@ -113,6 +121,7 @@ export function Sidebar({ me }: { me: MeDTO }) {
           setOpen={setDrive}
           right={
             <div className="flex items-center gap-0.5">
+              <SortMenu value={driveSort} onChange={setDriveSort} />
               <CreateDriveMenu
                 trigger={
                   <button
@@ -150,7 +159,7 @@ export function Sidebar({ me }: { me: MeDTO }) {
             </div>
           }
         />
-        {driveOpen && <DriveTreePanel />}
+        {driveOpen && <DriveTreePanel sort={driveSort} />}
       </div>
 
       <div className="flex items-center gap-2 border-t border-border/40 px-2 pt-2 text-xs text-muted-foreground">

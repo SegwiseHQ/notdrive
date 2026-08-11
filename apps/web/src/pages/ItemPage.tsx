@@ -1,3 +1,4 @@
+import { sortItems } from '@notdrive/shared';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -22,12 +23,13 @@ import { DrivePicker } from '../features/drive-picker/DrivePicker.js';
 import { PageEditor, type PageEditorHandle } from '../features/editor/Editor.js';
 import { PageShareDialog } from '../features/share/PageShareDialog.js';
 import { ShareDialog } from '../features/share/ShareDialog.js';
+import { SortMenu } from '../features/sorting/SortMenu.js';
 import { TagEditor } from '../features/tags/TagEditor.js';
 import { apiOrigin } from '../lib/api.js';
 import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 import { useNavigateToParent } from '../lib/nav.js';
-import { useSelection } from '../lib/store.js';
+import { useSelection, useUi } from '../lib/store.js';
 
 export function ItemPage() {
   const { wsId = '', itemId = '' } = useParams();
@@ -35,6 +37,8 @@ export function ItemPage() {
   const [params, setParams] = useSearchParams();
   const qc = useQueryClient();
   const select = useSelection((s) => s.select);
+  const pageSort = useUi((state) => state.pageSort);
+  const setPageSort = useUi((state) => state.setPageSort);
   const goToParent = useNavigateToParent();
   const [shareOpen, setShareOpen] = useState(false);
   // Open the comments drawer when ?comments=1 is in the URL — lets the
@@ -510,48 +514,40 @@ export function ItemPage() {
         <section className="mt-10">
           <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground/80">
             <span>Inside</span>
-            <button
-              type="button"
-              onClick={async () => {
-                const sub = await http.createItem({ title: 'Untitled', parent_id: item.id });
-                qc.invalidateQueries({ queryKey: ['items', wsId, item.id] });
-                qc.invalidateQueries({ queryKey: ['items', wsId] });
-                navigate(`/w/${wsId}/i/${sub.id}`);
-              }}
-              className="rounded-md px-2 py-0.5 text-[11px] normal-case tracking-normal text-muted-foreground hover:bg-muted"
-            >
-              + New sub-page
-            </button>
+            <div className="flex items-center gap-1 normal-case tracking-normal">
+              <SortMenu value={pageSort} onChange={setPageSort} showLabel />
+              <button
+                type="button"
+                onClick={async () => {
+                  const sub = await http.createItem({ title: 'Untitled', parent_id: item.id });
+                  qc.invalidateQueries({ queryKey: ['items', wsId, item.id] });
+                  qc.invalidateQueries({ queryKey: ['items', wsId] });
+                  navigate(`/w/${wsId}/i/${sub.id}`);
+                }}
+                className="rounded-md px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted"
+              >
+                + New sub-page
+              </button>
+            </div>
           </div>
           <ul className="flex flex-col">
-            {/* Sort the page-view child list alphabetically. The sidebar tree
-                still uses rank order so drag-drop reordering works there; this
-                list is read-only and a predictable A→Z order beats whichever
-                drag order the user might have set previously. */}
-            {[...(childrenQuery.data ?? [])]
-              .sort((a, b) =>
-                (a.title || 'Untitled').localeCompare(b.title || 'Untitled', undefined, {
-                  sensitivity: 'base',
-                  numeric: true,
-                }),
-              )
-              .map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/w/${wsId}/i/${c.id}`)}
-                    className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-muted"
-                  >
-                    <span className="text-muted-foreground">{c.type === 'file' ? '📎' : '📄'}</span>
-                    <span className="min-w-0 flex-1 truncate">{c.title || 'Untitled'}</span>
-                    {c.drive?.mime_type && (
-                      <span className="truncate text-xs text-muted-foreground">
-                        {c.drive.mime_type.split('.').pop()}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              ))}
+            {sortItems(childrenQuery.data ?? [], pageSort).map((c) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/w/${wsId}/i/${c.id}`)}
+                  className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-muted"
+                >
+                  <span className="text-muted-foreground">{c.type === 'file' ? '📎' : '📄'}</span>
+                  <span className="min-w-0 flex-1 truncate">{c.title || 'Untitled'}</span>
+                  {c.drive?.mime_type && (
+                    <span className="truncate text-xs text-muted-foreground">
+                      {c.drive.mime_type.split('.').pop()}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
           </ul>
         </section>
       )}

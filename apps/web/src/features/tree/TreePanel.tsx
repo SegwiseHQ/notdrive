@@ -8,7 +8,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { ItemDTO } from '@notdrive/shared';
+import { type ContentSort, type ItemDTO, sortItems } from '@notdrive/shared';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -30,7 +30,7 @@ import { useNavigateToParent } from '../../lib/nav.js';
 import { useSelection } from '../../lib/store.js';
 import { cn } from '../../lib/utils.js';
 
-export function TreePanel({ wsId }: { wsId: string }) {
+export function TreePanel({ wsId, sort }: { wsId: string; sort: ContentSort }) {
   const rootQuery = useQuery({
     queryKey: ['items', wsId, 'root'],
     queryFn: () => http.listItems({ root: true, archived: false }),
@@ -58,7 +58,7 @@ export function TreePanel({ wsId }: { wsId: string }) {
 
   if (rootQuery.isLoading)
     return <div className="px-2 py-1 text-xs text-muted-foreground">Loading…</div>;
-  const items = sortByTitle(rootQuery.data ?? []);
+  const items = sortItems(rootQuery.data ?? [], sort);
   if (items.length === 0)
     return <div className="px-2 py-1 text-xs text-muted-foreground">No pages yet</div>;
 
@@ -66,33 +66,22 @@ export function TreePanel({ wsId }: { wsId: string }) {
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
         {items.map((it) => (
-          <TreeRow key={it.id} item={it} depth={0} />
+          <TreeRow key={it.id} item={it} depth={0} sort={sort} />
         ))}
       </SortableContext>
     </DndContext>
   );
 }
 
-/**
- * Sort items by title alphabetically with natural numeric ordering, so
- * `Sprint 2` precedes `Sprint 10`. Case-insensitive. The sidebar tree used
- * to display in rank order (drag-drop output), but for typical use a
- * predictable A→Z order beats whichever rank values happened to land
- * during bulk imports.
- *
- * NOTE: This makes within-parent drag-reorder visually a no-op (the sort
- * overrides the new rank). Drag-to-different-parent still works as before.
- */
-function sortByTitle(items: ItemDTO[]): ItemDTO[] {
-  return [...items].sort((a, b) =>
-    (a.title || 'Untitled').localeCompare(b.title || 'Untitled', undefined, {
-      sensitivity: 'base',
-      numeric: true,
-    }),
-  );
-}
-
-function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
+function TreeRow({
+  item,
+  depth,
+  sort,
+}: {
+  item: ItemDTO;
+  depth: number;
+  sort: ContentSort;
+}) {
   const { wsId = '', itemId: currentItemId } = useParams();
   const navigate = useNavigate();
   const goToParent = useNavigateToParent();
@@ -228,14 +217,14 @@ function TreeRow({ item, depth }: { item: ItemDTO; depth: number }) {
       {expanded &&
         childrenQuery.data &&
         (() => {
-          const sortedChildren = sortByTitle(childrenQuery.data);
+          const sortedChildren = sortItems(childrenQuery.data, sort);
           return (
             <SortableContext
               items={sortedChildren.map((c) => c.id)}
               strategy={verticalListSortingStrategy}
             >
               {sortedChildren.map((c) => (
-                <TreeRow key={c.id} item={c} depth={depth + 1} />
+                <TreeRow key={c.id} item={c} depth={depth + 1} sort={sort} />
               ))}
             </SortableContext>
           );
