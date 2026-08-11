@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { toast } from 'sonner';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 
 export function ArchivePage() {
   const { wsId = '' } = useParams();
   const qc = useQueryClient();
+  useDocumentTitle('Archive');
   const archived = useQuery({
     queryKey: ['items', wsId, 'archived'],
     queryFn: () => http.listItems({ archived: true }),

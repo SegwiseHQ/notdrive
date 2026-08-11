@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, File as FileIcon, Folder, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 
 export function DriveTrashPage() {
   const qc = useQueryClient();
+  useDocumentTitle('Drive trash');
   const trash = useQuery({
     queryKey: ['drive-trash'],
     queryFn: http.driveTrash,

@@ -24,6 +24,7 @@ import { PageShareDialog } from '../features/share/PageShareDialog.js';
 import { ShareDialog } from '../features/share/ShareDialog.js';
 import { TagEditor } from '../features/tags/TagEditor.js';
 import { apiOrigin } from '../lib/api.js';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 import { useNavigateToParent } from '../lib/nav.js';
 import { useSelection } from '../lib/store.js';
@@ -173,6 +174,9 @@ export function ItemPage() {
   useEffect(() => {
     if (loadedTitle !== undefined) setTitle(loadedTitle);
   }, [loadedTitle]);
+  // Track the live input value, not the saved one, so renaming a page updates
+  // the tab as you type. Untitled pages borrow the heading's placeholder.
+  useDocumentTitle(loadedTitle === undefined ? null : title.trim() || 'Untitled');
 
   const saveSeq = useRef(0);
   const patch = useMutation({

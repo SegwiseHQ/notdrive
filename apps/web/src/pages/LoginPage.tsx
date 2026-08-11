@@ -1,8 +1,10 @@
 import { useSearchParams } from 'react-router';
 import { apiOrigin } from '../lib/api.js';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 
 export function LoginPage() {
   const [params] = useSearchParams();
+  useDocumentTitle('Sign in');
   const error = params.get('error');
   const domain = params.get('domain');
   const href = `${apiOrigin()}/api/auth/google/start`;

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
+import { useDocumentTitle } from '../lib/documentTitle.js';
 import { http } from '../lib/http.js';
 import { useWorkspace } from '../lib/store.js';
 
 export function AcceptInvitePage() {
   const [params] = useSearchParams();
+  useDocumentTitle('Accept invite');
   const setWs = useWorkspace((s) => s.setActiveWs);
   const navigate = useNavigate();
   const token = params.get('token') ?? '';
