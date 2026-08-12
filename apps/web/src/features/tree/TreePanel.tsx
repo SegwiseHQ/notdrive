@@ -54,6 +54,7 @@ export function TreePanel({ wsId, sort }: { wsId: string; sort: ContentSort }) {
       }
     }
     qc.invalidateQueries({ queryKey: ['items', wsId] });
+    qc.invalidateQueries({ queryKey: ['item-path', wsId] });
   };
 
   if (rootQuery.isLoading)
