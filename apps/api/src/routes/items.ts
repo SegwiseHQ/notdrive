@@ -17,6 +17,7 @@ import {
   createItem,
   duplicateItem,
   getItem,
+  getItemPath,
   linkDriveFile,
   listItems,
   moveItem,
@@ -37,6 +38,12 @@ app.get('/', zValidator('query', itemListQuerySchema), async (c) => {
   const user = c.get('user');
   const q = c.req.valid('query');
   return c.json(await listItems(m.workspace_id, user.id, q));
+});
+
+app.get('/:id/path', async (c) => {
+  const m = c.get('membership');
+  const user = c.get('user');
+  return c.json(await getItemPath(m.workspace_id, user.id, c.req.param('id')));
 });
 
 app.get('/:id', async (c) => {

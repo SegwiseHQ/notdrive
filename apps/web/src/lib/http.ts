@@ -4,6 +4,7 @@ import type {
   DriveRoleLiteral,
   DriveTreeNode,
   ItemDTO,
+  ItemPathDTO,
   MeDTO,
   NotificationListResponseDTO,
   RecentEntryDTO,
@@ -121,6 +122,7 @@ export const http = {
     return req<ItemDTO[]>(`/items?${qs}`);
   },
   getItem: (id: string) => req<ItemDTO>(`/items/${id}`),
+  getItemPath: (id: string) => req<ItemPathDTO>(`/items/${id}/path`),
   createItem: (body: {
     title: string;
     parent_id?: string | null;

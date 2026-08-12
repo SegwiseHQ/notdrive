@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { CommentsPanel } from '../features/comments/CommentsPanel.js';
 import { DrivePicker } from '../features/drive-picker/DrivePicker.js';
 import { PageEditor, type PageEditorHandle } from '../features/editor/Editor.js';
+import { ItemBreadcrumb } from '../features/navigation/ItemBreadcrumb.js';
 import { PageShareDialog } from '../features/share/PageShareDialog.js';
 import { ShareDialog } from '../features/share/ShareDialog.js';
 import { SortMenu } from '../features/sorting/SortMenu.js';
@@ -195,6 +196,9 @@ export function ItemPage() {
       return { saved, seq };
     },
     onSuccess: ({ saved, seq }, vars) => {
+      if (vars.title !== undefined || vars.visibility !== undefined) {
+        qc.invalidateQueries({ queryKey: ['item-path', wsId] });
+      }
       // Discard responses from earlier-fired saves that resolved out of order.
       if (seq !== saveSeq.current) return;
       qc.setQueryData(['item', itemId], saved);
@@ -262,6 +266,7 @@ export function ItemPage() {
               await Promise.all([
                 qc.invalidateQueries({ queryKey: ['item', itemId] }),
                 qc.invalidateQueries({ queryKey: ['items', wsId, itemId] }),
+                qc.invalidateQueries({ queryKey: ['item-path', wsId, itemId] }),
               ]);
               const fresh = qc.getQueryData<typeof item>(['item', itemId]);
               if (fresh) {
@@ -276,159 +281,164 @@ export function ItemPage() {
           </button>
         </div>
       )}
-      <div className="mb-2 flex items-center justify-end gap-1">
-        {item.visibility === 'private' && (
-          <span
-            className="mr-1 flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400"
-            title="Only you can see this page"
-          >
-            <Lock className="size-3" /> Private
-          </span>
-        )}
-        <button
-          type="button"
-          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
-          onClick={() =>
-            patch.mutate({
-              visibility: item.visibility === 'private' ? 'workspace' : 'private',
-            })
-          }
-          title={
-            item.visibility === 'private'
-              ? 'Share with workspace'
-              : 'Make private (only you can see this and all child pages)'
-          }
-        >
-          {item.visibility === 'private' ? (
-            <LockOpen className="size-4" />
-          ) : (
-            <Lock className="size-4" />
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <ItemBreadcrumb wsId={wsId} itemId={item.id} title={title} />
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {item.visibility === 'private' && (
+            <span
+              className="mr-1 flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400"
+              title="Only you can see this page"
+            >
+              <Lock className="size-3" /> Private
+            </span>
           )}
-        </button>
-        <button
-          type="button"
-          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
-          onClick={() => patch.mutate({ is_favorite: !item.is_favorite })}
-          title={item.is_favorite ? 'Unstar' : 'Star'}
-        >
-          <Star className={`size-4 ${item.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`} />
-        </button>
-        <button
-          type="button"
-          className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
-          onClick={() => setCommentsOpen(true)}
-          title="Comments"
-        >
-          <MessageSquare className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setShareOpen(true)}
-          className="flex items-center gap-1 rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background hover:opacity-90"
-        >
-          <Share2 className="size-3" /> Share
-        </button>
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              align="end"
-              className="z-50 w-52 rounded-md border border-border bg-card p-1 shadow-lg"
-            >
-              {driveId ? (
-                <DropdownMenu.Item
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
-                  onSelect={() => unlink.mutate()}
-                >
-                  <Unlink className="size-3.5" /> Unlink file
-                </DropdownMenu.Item>
-              ) : (
-                <DropdownMenu.Item
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
-                  onSelect={() => setParams({ pick: '1' })}
-                >
-                  <LinkIcon className="size-3.5" /> Link a Drive file
-                </DropdownMenu.Item>
-              )}
-              {driveId && (
-                <DropdownMenu.Item
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
-                  onSelect={() => setShareOpen(true)}
-                >
-                  <Share2 className="size-3.5" /> Manage sharing
-                </DropdownMenu.Item>
-              )}
-              {item.drive?.web_view_link && (
-                <DropdownMenu.Item
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
-                  onSelect={() => {
-                    const url = item.drive?.web_view_link;
-                    if (url) window.open(url, '_blank');
-                  }}
-                >
-                  <ExternalLink className="size-3.5" /> Open in Drive
-                </DropdownMenu.Item>
-              )}
-              <DropdownMenu.Separator className="my-1 h-px bg-border" />
-              <DropdownMenu.Item
-                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
-                onSelect={() => archive.mutate()}
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+            onClick={() =>
+              patch.mutate({
+                visibility: item.visibility === 'private' ? 'workspace' : 'private',
+              })
+            }
+            title={
+              item.visibility === 'private'
+                ? 'Share with workspace'
+                : 'Make private (only you can see this and all child pages)'
+            }
+          >
+            {item.visibility === 'private' ? (
+              <LockOpen className="size-4" />
+            ) : (
+              <Lock className="size-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+            onClick={() => patch.mutate({ is_favorite: !item.is_favorite })}
+            title={item.is_favorite ? 'Unstar' : 'Star'}
+          >
+            <Star
+              className={`size-4 ${item.is_favorite ? 'fill-yellow-500 text-yellow-500' : ''}`}
+            />
+          </button>
+          <button
+            type="button"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+            onClick={() => setCommentsOpen(true)}
+            title="Comments"
+          >
+            <MessageSquare className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="flex items-center gap-1 rounded-md bg-foreground px-2.5 py-1 text-xs font-medium text-background hover:opacity-90"
+          >
+            <Share2 className="size-3" /> Share
+          </button>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
               >
-                <Archive className="size-3.5" /> Archive page
-              </DropdownMenu.Item>
-              {driveId && (
-                <>
+                <MoreHorizontal className="size-4" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="end"
+                className="z-50 w-52 rounded-md border border-border bg-card p-1 shadow-lg"
+              >
+                {driveId ? (
                   <DropdownMenu.Item
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
-                    onSelect={async () => {
-                      if (!confirm('Move this Drive file to trash? Recoverable for 30 days.'))
-                        return;
-                      try {
-                        await http.trashDriveFile(driveId);
-                        await http.driveSync();
-                        qc.invalidateQueries();
-                        toast.success('Moved to Drive trash');
-                        goToParent(item.parent_id);
-                      } catch (e) {
-                        toast.error((e as Error).message);
-                      }
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
+                    onSelect={() => unlink.mutate()}
+                  >
+                    <Unlink className="size-3.5" /> Unlink file
+                  </DropdownMenu.Item>
+                ) : (
+                  <DropdownMenu.Item
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
+                    onSelect={() => setParams({ pick: '1' })}
+                  >
+                    <LinkIcon className="size-3.5" /> Link a Drive file
+                  </DropdownMenu.Item>
+                )}
+                {driveId && (
+                  <DropdownMenu.Item
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
+                    onSelect={() => setShareOpen(true)}
+                  >
+                    <Share2 className="size-3.5" /> Manage sharing
+                  </DropdownMenu.Item>
+                )}
+                {item.drive?.web_view_link && (
+                  <DropdownMenu.Item
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"
+                    onSelect={() => {
+                      const url = item.drive?.web_view_link;
+                      if (url) window.open(url, '_blank');
                     }}
                   >
-                    <Trash2 className="size-3.5" /> Move file to Drive trash
+                    <ExternalLink className="size-3.5" /> Open in Drive
                   </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
-                    onSelect={async () => {
-                      if (
-                        !confirm(
-                          'PERMANENTLY delete this Drive file? This cannot be undone. Only the file owner can do this.',
+                )}
+                <DropdownMenu.Separator className="my-1 h-px bg-border" />
+                <DropdownMenu.Item
+                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
+                  onSelect={() => archive.mutate()}
+                >
+                  <Archive className="size-3.5" /> Archive page
+                </DropdownMenu.Item>
+                {driveId && (
+                  <>
+                    <DropdownMenu.Item
+                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
+                      onSelect={async () => {
+                        if (!confirm('Move this Drive file to trash? Recoverable for 30 days.'))
+                          return;
+                        try {
+                          await http.trashDriveFile(driveId);
+                          await http.driveSync();
+                          qc.invalidateQueries();
+                          toast.success('Moved to Drive trash');
+                          goToParent(item.parent_id);
+                        } catch (e) {
+                          toast.error((e as Error).message);
+                        }
+                      }}
+                    >
+                      <Trash2 className="size-3.5" /> Move file to Drive trash
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-destructive outline-none data-[highlighted]:bg-destructive/10"
+                      onSelect={async () => {
+                        if (
+                          !confirm(
+                            'PERMANENTLY delete this Drive file? This cannot be undone. Only the file owner can do this.',
+                          )
                         )
-                      )
-                        return;
-                      try {
-                        await http.permanentlyDeleteDriveFile(driveId);
-                        qc.invalidateQueries();
-                        toast.success('File permanently deleted');
-                        goToParent(item.parent_id);
-                      } catch (e) {
-                        toast.error((e as Error).message);
-                      }
-                    }}
-                  >
-                    <Trash2 className="size-3.5" /> Delete file forever
-                  </DropdownMenu.Item>
-                </>
-              )}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+                          return;
+                        try {
+                          await http.permanentlyDeleteDriveFile(driveId);
+                          qc.invalidateQueries();
+                          toast.success('File permanently deleted');
+                          goToParent(item.parent_id);
+                        } catch (e) {
+                          toast.error((e as Error).message);
+                        }
+                      }}
+                    >
+                      <Trash2 className="size-3.5" /> Delete file forever
+                    </DropdownMenu.Item>
+                  </>
+                )}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        </div>
       </div>
 
       <input

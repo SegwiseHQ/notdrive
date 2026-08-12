@@ -1,5 +1,5 @@
 import { INITIAL_RANK, between } from '@notdrive/shared';
-import type { ItemDTO } from '@notdrive/shared';
+import type { ItemDTO, ItemPathDTO } from '@notdrive/shared';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import { deleteBlob, pullBody, pushBody } from '../drive/appdata.js';
@@ -7,6 +7,7 @@ import { badRequest, notFound } from '../util/errors.js';
 import { newId, now } from '../util/ids.js';
 import { logger } from '../util/logger.js';
 import { getWorkspaceAutoShare, shareFileWithMembers } from './autoShare.js';
+import { resolveItemPath } from './itemPath.js';
 import { publishItemEvent } from './itemStream.js';
 
 export interface ItemCreateArgs {
@@ -833,4 +834,31 @@ export async function getItem(workspaceId: string, userId: string, id: string): 
   const [dto] = await hydrate(workspaceId, userId, [r]);
   if (!dto) throw new Error(`visible item hydration returned no row: ${id}`);
   return dto;
+}
+
+export async function getItemPath(
+  workspaceId: string,
+  userId: string,
+  id: string,
+): Promise<ItemPathDTO> {
+  const item = await requireVisibleItem(workspaceId, userId, id);
+
+  return resolveItemPath(item, async (parentId) => {
+    const rows = await db
+      .select({
+        id: schema.items.id,
+        title: schema.items.title,
+        parent_id: schema.items.parent_id,
+      })
+      .from(schema.items)
+      .where(
+        and(
+          eq(schema.items.id, parentId),
+          eq(schema.items.workspace_id, workspaceId),
+          visibilityClause(userId),
+        ),
+      )
+      .limit(1);
+    return rows[0] ?? null;
+  });
 }

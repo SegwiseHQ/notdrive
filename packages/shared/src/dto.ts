@@ -46,6 +46,16 @@ export interface ItemDTO {
   drive?: DriveFileDTO | null;
 }
 
+export interface ItemPathNodeDTO {
+  id: string;
+  title: string;
+}
+
+export interface ItemPathDTO {
+  ancestors: ItemPathNodeDTO[];
+  complete: boolean;
+}
+
 export interface TagDTO {
   id: string;
   workspace_id: string;
