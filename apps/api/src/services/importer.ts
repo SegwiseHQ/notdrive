@@ -1,6 +1,6 @@
+import { markdownToHtml } from '@notdrive/shared';
 import AdmZip from 'adm-zip';
 import { eq } from 'drizzle-orm';
-import { Marked } from 'marked';
 import { db, schema } from '../db/index.js';
 import { newId } from '../util/ids.js';
 import { logger } from '../util/logger.js';
@@ -22,11 +22,6 @@ const IMAGE_CONTENT_TYPES: Record<string, string> = {
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
 };
-
-const md = new Marked({
-  gfm: true,
-  breaks: false,
-});
 
 export interface ImportResult {
   created: number;
@@ -191,7 +186,7 @@ export async function importMarkdownZip(
       const fileSeg = entry.segments[entry.segments.length - 1] ?? '';
       const parentId = folderSegs.length ? await ensureFolder(folderSegs) : null;
       const title = titleFromMarkdown(entry.raw) ?? titleFromFileName(fileSeg);
-      const renderedHtml = await md.parse(entry.raw, { async: true });
+      const renderedHtml = markdownToHtml(entry.raw);
       const id = await createItem({
         workspaceId,
         userId,

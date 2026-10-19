@@ -1,5 +1,6 @@
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
@@ -24,6 +25,8 @@ import { AlignedTableCell, AlignedTableHeader } from './tableCells.js';
 // C/C++, JSON, HTML, CSS, Bash, SQL, YAML, Markdown, Ruby, PHP, etc.) — good
 // trade-off between bundle size and coverage.
 const lowlight = createLowlight(common);
+
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 interface EditorProps {
   initialBody: string | null;
@@ -143,6 +146,8 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
         allowBase64: false,
         HTMLAttributes: { class: 'rounded-md border border-border' },
       }),
+      // linkOnPaste off so Cmd+Shift+V over a selection stays a plain-text replace.
+      Link.configure({ openOnClick: false, linkOnPaste: false }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Table.configure({ resizable: true }),
@@ -172,6 +177,16 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
       // the parent callback with the thread id. Returning `false` keeps
       // the editor's default click handling (caret placement, etc.).
       handleClickOn(_view, _pos, _node, _nodePos, event) {
+        // Plain click edits link text; Cmd+click (Ctrl+click off Mac, where it is a
+        // right-click) opens it. Relative targets would open a broken app route.
+        const href = (event.target as HTMLElement | null)
+          ?.closest?.('a[href]')
+          ?.getAttribute('href');
+        const openKey = IS_MAC ? event.metaKey : event.ctrlKey;
+        if (href && openKey && /^(https?:|mailto:)/i.test(href)) {
+          window.open(href, '_blank', 'noopener,noreferrer');
+          return true;
+        }
         const el = (event.target as HTMLElement | null)?.closest?.(
           '[data-thread-id]',
         ) as HTMLElement | null;

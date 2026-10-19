@@ -3,3 +3,4 @@ export * from './rank.js';
 export * from './query.js';
 export * from './zod.js';
 export * from './dto.js';
+export * from './markdown.js';
