@@ -1,6 +1,9 @@
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import { EditorContent, useEditor } from '@tiptap/react';
@@ -13,7 +16,9 @@ import { CommentMark } from './CommentMark.js';
 import type { MentionItem } from './MentionMenu.js';
 import { EmojiSuggestion } from './emojiSuggestion.js';
 import { buildMentionExtension } from './mentionExtension.js';
+import { PasteAndDrop } from './pasteAndDrop.js';
 import { SlashCommand } from './slashCommand.js';
+import { AlignedTableCell, AlignedTableHeader } from './tableCells.js';
 
 // Built outside the component so the language registry is created once. The
 // `common` set bundles ~35 popular languages (JS/TS, Python, Go, Rust, Java,
@@ -98,6 +103,8 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
   // without rebuilding the editor when members load asynchronously.
   const membersRef = useRef(members);
   membersRef.current = members;
+  const itemIdRef = useRef(itemId);
+  itemIdRef.current = itemId;
   // Refs for the click + selection callbacks so the useEditor config can
   // see the latest version without rebuilding the editor (which would
   // trigger the tippy/removeChild race we worked around in PR #20).
@@ -137,8 +144,14 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
         allowBase64: false,
         HTMLAttributes: { class: 'rounded-md border border-border' },
       }),
+      // linkOnPaste off so Cmd+Shift+V over a selection stays a plain-text replace.
+      Link.configure({ openOnClick: false, linkOnPaste: false }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      AlignedTableHeader,
+      AlignedTableCell,
       Placeholder.configure({
         placeholder: ({ node }) => {
           if (node.type.name === 'heading') return 'Heading';
@@ -149,6 +162,7 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
       EmojiSuggestion,
       buildMentionExtension(() => membersRef.current),
       CommentMark,
+      PasteAndDrop.configure({ getItemId: () => itemIdRef.current }),
     ],
     content: resolveItemAssetUrls(initialBody ?? ''),
     editorProps: {
@@ -161,6 +175,14 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
       // the parent callback with the thread id. Returning `false` keeps
       // the editor's default click handling (caret placement, etc.).
       handleClickOn(_view, _pos, _node, _nodePos, event) {
+        // Plain click edits link text; Cmd/Ctrl+click opens it.
+        const href = (event.target as HTMLElement | null)
+          ?.closest?.('a[href]')
+          ?.getAttribute('href');
+        if (href && (event.metaKey || event.ctrlKey)) {
+          window.open(href, '_blank', 'noopener,noreferrer');
+          return true;
+        }
         const el = (event.target as HTMLElement | null)?.closest?.(
           '[data-thread-id]',
         ) as HTMLElement | null;
@@ -180,7 +202,10 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
       setBody: (html: string) => {
         // setContent triggers onUpdate by default; pass `false` so we don't
         // immediately fire a save with the just-loaded server content.
-        editor?.commands.setContent(resolveItemAssetUrls(html), false);
+        if (!editor) return;
+        // Pending image uploads cannot map into the replaced content; drop their inserts.
+        for (const range of editor.storage.pasteAndDrop.pendingUploads) range.cancelled = true;
+        editor.commands.setContent(resolveItemAssetUrls(html), false);
       },
       applyCommentMark: (from: number, to: number, threadId: string) => {
         if (!editor) return;

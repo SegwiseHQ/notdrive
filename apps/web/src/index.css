@@ -68,3 +68,51 @@
     background: hsl(var(--muted-foreground) / 0.4);
   }
 }
+
+/* Editor tables. Unlayered: ProseMirror adds these classes at runtime, outside Tailwind's content scan. */
+.ProseMirror .tableWrapper {
+  overflow-x: auto;
+  margin: 1em 0;
+}
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+}
+.ProseMirror th,
+.ProseMirror td {
+  position: relative;
+  min-width: 1em;
+  border: 1px solid hsl(var(--border));
+  padding: 0.375rem 0.5rem;
+  vertical-align: top;
+}
+.ProseMirror th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+  text-align: left;
+}
+.ProseMirror th > p,
+.ProseMirror td > p {
+  margin: 0;
+}
+.ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: hsl(var(--foreground) / 0.06);
+  pointer-events: none;
+}
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: hsl(var(--ring) / 0.4);
+  pointer-events: none;
+}
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}

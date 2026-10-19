@@ -1,5 +1,20 @@
+import { CellSelection } from '@tiptap/pm/tables';
 import type { Editor } from '@tiptap/react';
-import { Bold, Code, Italic, MessageSquarePlus, Strikethrough } from 'lucide-react';
+import {
+  BetweenHorizontalEnd,
+  BetweenHorizontalStart,
+  BetweenVerticalEnd,
+  BetweenVerticalStart,
+  Bold,
+  Code,
+  Columns3,
+  Italic,
+  MessageSquarePlus,
+  PanelTop,
+  Rows3,
+  Strikethrough,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import tippy, { type Instance as TippyInstance } from 'tippy.js';
@@ -37,11 +52,11 @@ export function BubbleToolbar({ editor, onComment }: Props) {
     const shouldShow = () => {
       if (editor.isDestroyed) return false;
       if (!editor.isFocused) return false;
-      const { from, to } = editor.state.selection;
-      if (from === to) return false;
       if (editor.isActive('image')) return false;
       if (editor.isActive('horizontalRule')) return false;
-      return true;
+      if (editor.isActive('table')) return true;
+      const { from, to } = editor.state.selection;
+      return from !== to;
     };
 
     const getSelectionRect = () => {
@@ -129,37 +144,60 @@ function ToolbarContent({
   editor: Editor;
   onComment?: () => void;
 }) {
+  const hasRange = !editor.state.selection.empty;
+  // A cell range's from/to also spans unselected cells, so it cannot anchor a comment.
+  const canComment = hasRange && !(editor.state.selection instanceof CellSelection);
+  const inTable = editor.isActive('table');
   return (
     <div className="flex items-center gap-0.5 rounded-md border border-border bg-card p-0.5 shadow-md">
-      <ToolbarButton
-        active={editor.isActive('bold')}
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        title="Bold (⌘B)"
-      >
-        <Bold className="size-3.5" />
-      </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive('italic')}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        title="Italic (⌘I)"
-      >
-        <Italic className="size-3.5" />
-      </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive('strike')}
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        title="Strikethrough (⌘⇧X)"
-      >
-        <Strikethrough className="size-3.5" />
-      </ToolbarButton>
-      <ToolbarButton
-        active={editor.isActive('code')}
-        onClick={() => editor.chain().focus().toggleCode().run()}
-        title="Inline code (⌘E)"
-      >
-        <Code className="size-3.5" />
-      </ToolbarButton>
-      {onComment && (
+      {hasRange && (
+        <>
+          <ToolbarButton
+            active={editor.isActive('bold')}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            title="Bold (⌘B)"
+          >
+            <Bold className="size-3.5" />
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive('italic')}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            title="Italic (⌘I)"
+          >
+            <Italic className="size-3.5" />
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive('strike')}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            title="Strikethrough (⌘⇧X)"
+          >
+            <Strikethrough className="size-3.5" />
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive('code')}
+            onClick={() => editor.chain().focus().toggleCode().run()}
+            title="Inline code (⌘E)"
+          >
+            <Code className="size-3.5" />
+          </ToolbarButton>
+        </>
+      )}
+      {inTable && (
+        <>
+          {hasRange && <span className="mx-0.5 h-4 w-px bg-border" aria-hidden />}
+          {TABLE_ACTIONS.map(({ title, Icon, command }) => (
+            <ToolbarButton
+              key={title}
+              active={false}
+              onClick={() => editor.chain().focus()[command]().run()}
+              title={title}
+            >
+              <Icon className="size-3.5" />
+            </ToolbarButton>
+          ))}
+        </>
+      )}
+      {canComment && onComment && (
         <>
           <span className="mx-0.5 h-4 w-px bg-border" aria-hidden />
           <ToolbarButton active={false} onClick={onComment} title="Comment">
@@ -170,6 +208,17 @@ function ToolbarContent({
     </div>
   );
 }
+
+const TABLE_ACTIONS = [
+  { title: 'Add row above', Icon: BetweenHorizontalStart, command: 'addRowBefore' },
+  { title: 'Add row below', Icon: BetweenHorizontalEnd, command: 'addRowAfter' },
+  { title: 'Add column left', Icon: BetweenVerticalStart, command: 'addColumnBefore' },
+  { title: 'Add column right', Icon: BetweenVerticalEnd, command: 'addColumnAfter' },
+  { title: 'Delete row', Icon: Rows3, command: 'deleteRow' },
+  { title: 'Delete column', Icon: Columns3, command: 'deleteColumn' },
+  { title: 'Toggle header row', Icon: PanelTop, command: 'toggleHeaderRow' },
+  { title: 'Delete table', Icon: Trash2, command: 'deleteTable' },
+] as const;
 
 function ToolbarButton({
   active,
