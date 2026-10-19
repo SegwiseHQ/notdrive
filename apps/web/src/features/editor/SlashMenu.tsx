@@ -12,6 +12,7 @@ import {
   ListOrdered,
   Minus,
   Quote,
+  Table2,
   Text,
 } from 'lucide-react';
 import { forwardRef, useImperativeHandle, useState } from 'react';
@@ -123,6 +124,25 @@ export const SLASH_ITEMS: SlashItem[] = [
       });
       // Trailing space so the caret leaves the inserted text cleanly.
       editor.chain().focus().deleteRange(range).insertContent(`${today} `).run();
+    },
+  },
+  {
+    title: 'Table',
+    description: 'Insert a 3×3 table',
+    keywords: ['table', 'grid'],
+    Icon: Table2,
+    command: ({ editor, range }) => {
+      if (editor.isActive('table')) {
+        editor.chain().focus().deleteRange(range).run();
+        toast.error('A table cannot go inside another table.');
+        return;
+      }
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+        .run();
     },
   },
   {
