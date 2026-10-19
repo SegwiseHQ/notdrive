@@ -17,8 +17,7 @@ import {
 } from 'lucide-react';
 import { forwardRef, useImperativeHandle, useState } from 'react';
 import { toast } from 'sonner';
-import { http } from '../../lib/http.js';
-import { resolveItemAssetUrl } from '../../lib/itemAssets.js';
+import { IMAGE_MIME_TYPES, uploadAndInsertImages } from './imageUpload.js';
 
 export interface SlashItem {
   title: string;
@@ -162,24 +161,12 @@ export const SLASH_ITEMS: SlashItem[] = [
       // Programmatic file picker — avoids needing a permanent <input>.
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml';
-      input.onchange = async () => {
+      input.accept = IMAGE_MIME_TYPES.join(',');
+      input.onchange = () => {
         const file = input.files?.[0];
         if (!file) return;
-        const uploadingId = toast.loading('Uploading image…');
-        try {
-          const { url } = await http.uploadItemAsset(itemId, file);
-          // The API returns a portable relative URL; render it from the API
-          // origin because production web hosting does not proxy asset paths.
-          editor
-            .chain()
-            .focus()
-            .setImage({ src: resolveItemAssetUrl(url) })
-            .run();
-          toast.success('Image inserted', { id: uploadingId });
-        } catch (err) {
-          toast.error(`Upload failed: ${(err as Error).message}`, { id: uploadingId });
-        }
+        const { from } = editor.state.selection;
+        void uploadAndInsertImages(editor, itemId, [file], { from, to: from });
       };
       input.click();
     },
