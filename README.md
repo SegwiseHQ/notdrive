@@ -89,7 +89,7 @@ NotDrive sits on top of your Google Drive and gives you the things Drive doesn't
 
 ### Prerequisites
 
-- Node 24 (`volta install node@24.18.0` or `nvm install 24.18.0`)
+- Node 24 (`volta install node@24.22.1` or `nvm install 24.22.1`)
 - pnpm 9 (`corepack enable && corepack prepare pnpm@9.15.9 --activate`)
 - A Google Cloud project with OAuth credentials (see [Google OAuth setup](#google-oauth-setup) below)
 

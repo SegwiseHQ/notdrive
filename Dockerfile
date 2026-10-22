@@ -6,7 +6,7 @@
 ############################
 # 1) Builder: bundle the api
 ############################
-FROM node:24.18.0-alpine3.24 AS builder
+FROM node:24.22.1-alpine3.24 AS builder
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     CI=1
@@ -32,7 +32,7 @@ RUN pnpm --filter @notdrive/api build
 ###################################################
 # 2) Deps: production-only install for native deps
 ###################################################
-FROM node:24.18.0-alpine3.24 AS deps
+FROM node:24.22.1-alpine3.24 AS deps
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     CI=1
@@ -51,7 +51,7 @@ RUN pnpm install --frozen-lockfile --prod --filter @notdrive/api
 #######################
 # 3) Runtime: slim image
 #######################
-FROM node:24.18.0-alpine3.24 AS runtime
+FROM node:24.22.1-alpine3.24 AS runtime
 ENV NODE_ENV=production \
     PORT=3000
 
