@@ -1,6 +1,8 @@
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import { EditorContent, useEditor } from '@tiptap/react';
@@ -14,6 +16,7 @@ import type { MentionItem } from './MentionMenu.js';
 import { EmojiSuggestion } from './emojiSuggestion.js';
 import { buildMentionExtension } from './mentionExtension.js';
 import { SlashCommand } from './slashCommand.js';
+import { AlignedTableCell, AlignedTableHeader } from './tableCells.js';
 
 // Built outside the component so the language registry is created once. The
 // `common` set bundles ~35 popular languages (JS/TS, Python, Go, Rust, Java,
@@ -139,6 +142,10 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      AlignedTableHeader,
+      AlignedTableCell,
       Placeholder.configure({
         placeholder: ({ node }) => {
           if (node.type.name === 'heading') return 'Heading';
