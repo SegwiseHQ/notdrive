@@ -4,6 +4,7 @@
 **/.cache
 **/coverage
 **/.next
+**/.pnpm-store
 
 # Local DB files & dev artifacts
 **/*.db
@@ -12,15 +13,14 @@
 **/*.db-wal
 apps/api/notdrive.db
 
-# Env / secrets
-# NOTE: .env at the repo root IS copied into the image (see Dockerfile).
-# Do not push this image to a registry others can pull from — secrets are
-# embedded in image layers and visible to anyone with pull access.
-.env.local
-.env.development
-.env.test
-.env.*.local
-!.env.example
+# Runtime configuration and credentials must never enter the build context.
+.env
+.env.*
+**/.env
+**/.env.*
+**/credentials
+**/.aws
+**/.ssh
 
 # VCS / IDE / OS
 .git

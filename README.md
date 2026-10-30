@@ -251,14 +251,40 @@ The API's Docker entrypoint runs migrations on container start. Safe to re-run; 
 
 ### Docker (recommended)
 
-A multi-stage `Dockerfile` is included that produces a ~250 MB image:
+A multi-stage `Dockerfile` builds the API without credentials. Env files and
+credential directories are excluded from the build context. Production reads
+configuration from the process environment; dotenv file discovery is only used
+for local development.
 
 ```bash
 # Build (use --platform linux/amd64 from Apple Silicon for x86 servers):
 docker build -t notdrive-api:latest .
 
-# Run:
-docker run --rm -p 3000:3000 --env-file .env notdrive-api:latest
+# Push the same image to your registry; no production env file is needed to build.
+docker tag notdrive-api:latest YOUR_REGISTRY/notdrive-api:YOUR_TAG
+docker push YOUR_REGISTRY/notdrive-api:YOUR_TAG
+```
+
+#### ECS production deployment
+
+Use the direct AWS CLI setup in [infra/ecs/README.md](infra/ecs/README.md). It
+reuses the existing `dashboard-server` cluster, private subnets, Postgres, and
+HTTPS ALB. Runtime configuration lives in SSM Parameter Store under
+`/segwise/notdrive/runtime/`; ECS injects it when tasks start. Production needs no
+host-side env file.
+
+The bootstrap script creates a service at zero tasks. After configuration and
+routing are ready, explicit activation starts one task. Each task runs the
+migration container first and starts the API only after migration success.
+GitHub Actions builds/pushes ARM64 images to the existing `api-notdrive` ECR
+repository and updates the existing service by immutable digest, preserving its
+desired count. The frontend remains a separate Amplify deployment.
+
+For a standalone container with an existing Postgres database:
+
+```bash
+docker run --rm -p 3000:3000 --env-file /etc/notdrive/runtime.env \
+  -e NODE_ENV=production -e DB_DRIVER=postgres -e PORT=3000 notdrive-api:latest
 ```
 
 The container:
@@ -378,6 +404,8 @@ notdrive/
 │           └── components/     Shared UI primitives
 ├── packages/shared/            Cross-app types + zod schemas + fractional-rank helper
 ├── docker-compose.yml          Local Postgres + Mailpit
+├── infra/ecs/                  Direct ECS setup and operations guide
+├── scripts/ecs.py              AWS CLI bootstrap and immutable image releases
 ├── Dockerfile                  Multi-stage prod build
 ├── docker-entrypoint.sh        Migration + start
 ├── DESIGN.md                   Detailed architecture + decision log

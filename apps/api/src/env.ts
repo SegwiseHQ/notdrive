@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import * as dotenv from 'dotenv';
 import { z } from 'zod';
 
-// Walk up from this file looking for a .env so running from any cwd works.
+// Local development only: walk up from this file so any cwd works.
+// Production receives configuration through the container/process environment.
 function loadDotenv() {
   const here = dirname(fileURLToPath(import.meta.url));
   const candidates = [
@@ -21,7 +22,9 @@ function loadDotenv() {
   }
   dotenv.config();
 }
-loadDotenv();
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+  loadDotenv();
+}
 
 // Minimal env — everything that infrastructure (migrations, db driver switch, logger) needs.
 const minimalSchema = z.object({

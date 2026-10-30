@@ -5,9 +5,10 @@ build
 .turbo
 coverage
 .env
-.env.local
-.env.*.local
-.env.prod
+.env.*
+!.env.example
+credentials/
+__pycache__/
 *.log
 .DS_Store
 .vscode

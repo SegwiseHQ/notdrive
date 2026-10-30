@@ -83,10 +83,12 @@ COPY --chown=app:app --from=deps /app/apps/api/node_modules /app/apps/api/node_m
 COPY --chown=app:app --from=builder /app/apps/api/dist ./dist
 COPY --chown=app:app --from=builder /app/apps/api/drizzle ./drizzle
 
-# Root .env baked into the image. dotenv in env.ts walks up from dist/ and
-# picks up /app/.env. WARNING: this embeds secrets in the image — only push
-# this image to private registries you trust.
-COPY --chown=app:app .env /app/.env
+# Bundle the public RDS CA for verified TLS connections from private ECS tasks.
+RUN curl -fsS https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+    -o /etc/ssl/rds-global-bundle.pem
+
+# Configuration is injected at container startup (ECS SSM references, docker run
+# --env-file, or the deployment platform's environment/secrets configuration).
 
 COPY --chown=app:app docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
@@ -94,7 +96,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 USER app
 EXPOSE 3000
 
-# Traefik can use this directly, but having an in-image healthcheck helps ECS too.
+# ECS also declares this probe in its task definition.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fsS "http://127.0.0.1:${PORT:-3000}/health" || exit 1
 

@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   checks:
@@ -14,6 +18,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Validate manual release branch
+        if: github.event_name == 'workflow_dispatch'
+        run: test "$GITHUB_REF" = refs/heads/main
 
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -37,3 +47,57 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Check ECS deployment safeguards
+        run: python3 -m unittest discover -s tests/deployment -v
+
+  image:
+    name: Build ARM64 API image
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: docker build --platform linux/arm64 --tag "notdrive-check:$GITHUB_SHA" .
+
+  deploy-production:
+    name: Publish and update ECS
+    needs: [checks, image]
+    if: vars.ECS_DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    concurrency:
+      group: deploy-notdrive-production
+      cancel-in-progress: false
+    env:
+      AWS_REGION: ap-south-1
+      ECR_REGISTRY: 302693472565.dkr.ecr.ap-south-1.amazonaws.com
+      IMAGE_REPOSITORY: 302693472565.dkr.ecr.ap-south-1.amazonaws.com/api-notdrive
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check deployment credentials
+        env:
+          CI_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          CI_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          if [[ -z "$CI_ACCESS_KEY_ID" || -z "$CI_SECRET_ACCESS_KEY" ]]; then
+            echo "Configure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in Notdrive Actions secrets." >&2
+            exit 1
+          fi
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: '302693472565'
+      - name: Login to ECR
+        run: aws ecr get-login-password | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+      - name: Build and push the commit image
+        run: |
+          docker build --platform linux/arm64 --tag "$IMAGE_REPOSITORY:$GITHUB_SHA" .
+          docker push "$IMAGE_REPOSITORY:$GITHUB_SHA"
+      - name: Update immutable task revision and preserve desired count
+        run: python3 scripts/ecs.py deploy --image-tag "$GITHUB_SHA"
