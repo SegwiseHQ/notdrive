@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   ExternalLink,
+  FileDown,
   Link as LinkIcon,
   Lock,
   LockOpen,
@@ -42,6 +43,7 @@ export function ItemPage() {
   const setPageSort = useUi((state) => state.setPageSort);
   const goToParent = useNavigateToParent();
   const [shareOpen, setShareOpen] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   // Open the comments drawer when ?comments=1 is in the URL — lets the
   // notification dropdown deep-link straight into the panel without a
   // post-navigate setState dance.
@@ -342,6 +344,7 @@ export function ItemPage() {
               <button
                 type="button"
                 className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted"
+                aria-label="Page actions"
               >
                 <MoreHorizontal className="size-4" />
               </button>
@@ -351,6 +354,37 @@ export function ItemPage() {
                 align="end"
                 className="z-50 w-52 rounded-md border border-border bg-card p-1 shadow-lg"
               >
+                {!driveId && (
+                  <>
+                    <DropdownMenu.Item
+                      disabled={exportingPdf}
+                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                      onSelect={async () => {
+                        if (exportingPdf) return;
+                        const body = editorRef.current?.getHTML() ?? item.body ?? '';
+                        setExportingPdf(true);
+                        const toastId = toast.loading('Preparing PDF…');
+                        try {
+                          const { exportDocumentPdf } = await import(
+                            '../features/editor/exportPdf.js'
+                          );
+                          await exportDocumentPdf(title, body);
+                          toast.success('PDF downloaded', { id: toastId });
+                        } catch (error) {
+                          toast.error(`PDF export failed: ${(error as Error).message}`, {
+                            id: toastId,
+                          });
+                        } finally {
+                          setExportingPdf(false);
+                        }
+                      }}
+                    >
+                      <FileDown className="size-3.5" />
+                      {exportingPdf ? 'Exporting PDF…' : 'Export to PDF'}
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Separator className="my-1 h-px bg-border" />
+                  </>
+                )}
                 {driveId ? (
                   <DropdownMenu.Item
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"

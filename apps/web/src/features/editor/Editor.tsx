@@ -57,6 +57,8 @@ interface EditorProps {
  * cleanup order during a remount races.
  */
 export interface PageEditorHandle {
+  /** Read the current body, including edits that have not autosaved yet. */
+  getHTML: () => string | undefined;
   /** Replace the editor's HTML body in place. Used to accept remote updates. */
   setBody: (html: string) => void;
   /**
@@ -177,6 +179,7 @@ export const PageEditor = forwardRef<PageEditorHandle, EditorProps>(function Pag
   useImperativeHandle(
     ref,
     () => ({
+      getHTML: () => editor?.getHTML(),
       setBody: (html: string) => {
         // setContent triggers onUpdate by default; pass `false` so we don't
         // immediately fire a save with the just-loaded server content.
