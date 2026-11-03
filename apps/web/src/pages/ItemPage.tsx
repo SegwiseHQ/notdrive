@@ -228,10 +228,10 @@ export function ItemPage() {
   });
 
   if (itemQuery.isLoading)
-    return <div className="p-12 text-sm text-muted-foreground">Loading…</div>;
+    return <div className="p-6 text-sm text-muted-foreground md:p-12">Loading…</div>;
   if (itemQuery.isError || !itemQuery.data) {
     return (
-      <div className="mx-auto flex max-w-[640px] flex-col items-center gap-3 p-12 text-center text-sm">
+      <div className="mx-auto flex max-w-[640px] flex-col items-center gap-3 p-6 text-center md:p-12 text-sm">
         <p className="text-lg font-medium">This page isn't here.</p>
         <p className="text-muted-foreground">
           It may have been archived or deleted. Return home and check the tree.
@@ -250,7 +250,7 @@ export function ItemPage() {
   const driveId = item.drive_file_id;
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[880px] flex-col px-12 py-10">
+    <div className="mx-auto flex min-h-0 w-full max-w-[880px] flex-col px-4 py-6 md:px-12 md:py-10">
       {remoteUpdate && (
         <div className="mb-3 flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
           <span>
@@ -483,7 +483,7 @@ export function ItemPage() {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
         }}
         placeholder="Untitled"
-        className="w-full border-0 bg-transparent text-4xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
+        className="w-full border-0 bg-transparent text-3xl font-semibold md:text-4xl tracking-tight outline-none placeholder:text-muted-foreground/50"
       />
 
       <div className="mt-3">
@@ -518,7 +518,7 @@ export function ItemPage() {
                 href={item.drive.web_view_link}
                 target="_blank"
                 rel="noreferrer"
-                className="pointer-events-auto absolute right-3 top-3 flex items-center gap-1 rounded-full bg-foreground/90 px-3 py-1 text-xs font-medium text-background opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100"
+                className="pointer-events-auto absolute right-3 top-3 flex items-center gap-1 rounded-full bg-foreground/90 px-3 py-1 text-xs font-medium text-background opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100 [@media(hover:none)]:opacity-100"
               >
                 <ExternalLink className="size-3" /> Open to edit
               </a>

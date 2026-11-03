@@ -168,8 +168,8 @@ export function DrivePage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-12 py-10">
-      <div className="mb-4 flex items-center gap-1 text-sm">
+    <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-4 py-6 md:px-12 md:py-10">
+      <div className="mb-4 flex items-center gap-1 overflow-x-auto whitespace-nowrap text-sm">
         <button
           type="button"
           onClick={() => goUpTo(0)}
@@ -192,7 +192,7 @@ export function DrivePage() {
         ))}
       </div>
 
-      <div className="mb-6 flex items-end justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between md:gap-4">
         <div className="min-w-0">
           <h1 className="truncate text-3xl font-semibold tracking-tight">
             {currentFolder?.name ?? 'My Drive'}
@@ -201,14 +201,14 @@ export function DrivePage() {
             Click a file to preview it. Click a folder to drill in.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-md border border-border pl-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center rounded-md border border-border pl-2 md:flex-none">
             <Search className="size-3.5 text-muted-foreground" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Filter…"
-              className="w-40 bg-transparent px-2 py-1 text-sm outline-none"
+              className="w-full min-w-0 bg-transparent px-2 py-1 text-sm outline-none md:w-40"
             />
           </div>
           <SortMenu value={driveSort} onChange={setDriveSort} showLabel />
@@ -375,7 +375,7 @@ function Row({
               <button
                 type="button"
                 onClick={(e) => e.stopPropagation()}
-                className="rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100"
+                className="rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                 title={`Create new Drive file inside "${node.name}"`}
               >
                 + New
@@ -389,7 +389,7 @@ function Row({
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100"
+            className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100 [@media(hover:none)]:opacity-100"
             title="Open in Drive"
           >
             <ExternalLink className="size-3" />

@@ -4,6 +4,9 @@ import { create } from 'zustand';
 interface UiState {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
+  /** Off-canvas sidebar drawer state on narrow (mobile) viewports. */
+  mobileNavOpen: boolean;
+  setMobileNavOpen: (open: boolean) => void;
   darkOverride: DarkMode;
   pageSort: ContentSort;
   driveSort: ContentSort;
@@ -12,6 +15,12 @@ interface UiState {
   setPageSort: (sort: ContentSort) => void;
   setDriveSort: (sort: ContentSort) => void;
   setSidebarWidth: (w: number) => void;
+}
+
+export const MOBILE_QUERY = '(max-width: 767px)';
+
+export function isMobileViewport(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches;
 }
 
 export const SIDEBAR_LIMITS = { MIN: 200, MAX: 480 };
@@ -29,10 +38,17 @@ function storedSort(key: string): ContentSort {
 export const useUi = create<UiState>((set) => ({
   sidebarCollapsed: false,
   sidebarWidth: initialSidebarWidth,
+  mobileNavOpen: false,
+  setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
   darkOverride: (localStorage.getItem('notdrive.dark') as DarkMode) ?? 'system',
   pageSort: storedSort('notdrive.page_sort'),
   driveSort: storedSort('notdrive.drive_sort'),
-  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  toggleSidebar: () =>
+    set((s) =>
+      isMobileViewport()
+        ? { mobileNavOpen: !s.mobileNavOpen }
+        : { sidebarCollapsed: !s.sidebarCollapsed },
+    ),
   setDark: (m) => {
     localStorage.setItem('notdrive.dark', m);
     set({ darkOverride: m });

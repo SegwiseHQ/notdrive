@@ -41,7 +41,7 @@ export function ViewContainer({
   useDocumentTitle(title);
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-12 py-10">
+    <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-4 py-6 md:px-12 md:py-10">
       <div className="mb-6 flex items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="truncate text-3xl font-semibold tracking-tight">{title}</h1>

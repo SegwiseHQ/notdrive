@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
+import { Menu, Search } from 'lucide-react';
 import { useEffect } from 'react';
-import { Navigate, Outlet, useParams } from 'react-router';
+import { Navigate, Outlet, useLocation, useParams } from 'react-router';
 import { CommandPalette } from './commands/CommandPalette.js';
 import { useHotkeysGlobal } from './commands/hotkeys.js';
+import { useIsMobile } from './lib/hooks.js';
 import { http, isApiError } from './lib/http.js';
-import { useUi, useWorkspace } from './lib/store.js';
+import { useCommand, useUi, useWorkspace } from './lib/store.js';
 import { useApplyTheme } from './lib/theme.js';
 import { cn } from './lib/utils.js';
 import { BulkActionBar } from './panes/BulkActionBar.js';
@@ -18,6 +20,32 @@ export function AppShell() {
   const sidebarCollapsed = useUi((s) => s.sidebarCollapsed);
   const sidebarWidth = useUi((s) => s.sidebarWidth);
   const setActiveWs = useWorkspace((s) => s.setActiveWs);
+  const isMobile = useIsMobile();
+  const mobileNavOpen = useUi((s) => s.mobileNavOpen);
+  const setMobileNavOpen = useUi((s) => s.setMobileNavOpen);
+  const openPalette = useCommand((s) => s.setOpen);
+  const location = useLocation();
+
+  // Close the mobile drawer whenever the user navigates somewhere.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run on route change only.
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname, setMobileNavOpen]);
+
+  // Lock background scroll while the drawer is open; Escape closes it.
+  useEffect(() => {
+    if (!isMobile || !mobileNavOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileNavOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isMobile, mobileNavOpen, setMobileNavOpen]);
 
   const meQuery = useQuery({
     queryKey: ['me'],
@@ -77,6 +105,64 @@ export function AppShell() {
     // Declarative redirect — calling navigate() during render fires a setState
     // on the RouterProvider mid-render and triggers a React warning.
     return <Navigate to={`/w/${defaultWs.id}`} replace />;
+  }
+
+  if (isMobile) {
+    return (
+      <div className="flex h-full flex-col overflow-hidden bg-background">
+        <header className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-2 pt-[env(safe-area-inset-top)]">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            className="rounded-md p-2 text-muted-foreground transition hover:bg-muted"
+            aria-label="Open navigation"
+            aria-expanded={mobileNavOpen}
+          >
+            <Menu className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => openPalette(true)}
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-left text-sm text-muted-foreground"
+            aria-label="Search"
+          >
+            <Search className="size-4 shrink-0" />
+            <span className="truncate">Search…</span>
+          </button>
+        </header>
+        <main className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden bg-background">
+          <Outlet />
+        </main>
+
+        {/* Off-canvas drawer */}
+        <button
+          type="button"
+          className={cn(
+            'fixed inset-0 z-40 bg-black/50 transition-opacity duration-200',
+            mobileNavOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
+          )}
+          onClick={() => setMobileNavOpen(false)}
+          aria-label="Close navigation"
+          tabIndex={mobileNavOpen ? 0 : -1}
+        />
+        <aside
+          className={cn(
+            'fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] bg-sidebar pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-2xl transition-transform duration-200 ease-out',
+            mobileNavOpen ? 'translate-x-0' : '-translate-x-full',
+          )}
+          aria-hidden={!mobileNavOpen}
+          inert={!mobileNavOpen}
+          onClickCapture={(e) => {
+            // Links to the current route don't change the pathname, so close explicitly.
+            if ((e.target as HTMLElement).closest('a[href]')) setMobileNavOpen(false);
+          }}
+        >
+          <Sidebar me={me} />
+        </aside>
+        <CommandPalette />
+        <BulkActionBar />
+      </div>
+    );
   }
 
   return (

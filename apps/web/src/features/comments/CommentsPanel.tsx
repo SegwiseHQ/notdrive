@@ -379,7 +379,7 @@ function CommentRow({
             {formatRelative(comment.created_at)}
             {comment.edited_at && ' · edited'}
           </span>
-          <div className="ml-auto flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+          <div className="ml-auto flex items-center gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
             {canEdit && !editing && (
               <button
                 type="button"
