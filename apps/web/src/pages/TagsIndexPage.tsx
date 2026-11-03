@@ -10,7 +10,7 @@ export function TagsIndexPage() {
   const tags = useQuery({ queryKey: ['tags', wsId], queryFn: http.listTags });
 
   return (
-    <div className="mx-auto w-full max-w-[880px] px-12 py-10">
+    <div className="mx-auto w-full max-w-[880px] px-4 py-6 md:px-12 md:py-10">
       <h1 className="text-3xl font-semibold tracking-tight">Tags</h1>
       <p className="mt-1 text-sm text-muted-foreground">Tags for your pages.</p>
 

@@ -29,7 +29,7 @@ export function DriveFilePage() {
   useDocumentTitle(file?.name);
 
   return (
-    <div className="mx-auto flex min-h-0 w-full flex-1 flex-col px-8 py-8">
+    <div className="mx-auto flex min-h-0 w-full flex-1 flex-col px-4 py-4 md:px-8 md:py-8">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div className="min-w-0">
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80">
@@ -128,7 +128,7 @@ export function DriveFilePage() {
             href={webViewLink}
             target="_blank"
             rel="noreferrer"
-            className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-foreground/90 px-3 py-1 text-xs font-medium text-background opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100"
+            className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-foreground/90 px-3 py-1 text-xs font-medium text-background opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100 [@media(hover:none)]:opacity-100"
           >
             <ExternalLink className="size-3" /> Open to edit
           </a>

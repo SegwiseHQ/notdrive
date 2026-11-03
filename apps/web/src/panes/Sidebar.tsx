@@ -310,7 +310,7 @@ function SidebarSearchTrigger() {
     >
       <Search className="size-3.5 shrink-0" />
       <span className="min-w-0 flex-1 truncate">Search…</span>
-      <kbd className="shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono">
+      <kbd className="hidden shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono md:inline">
         {isMac ? '⌘K' : 'Ctrl K'}
       </kbd>
     </button>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MOBILE_QUERY, isMobileViewport } from './store.js';
 
 /**
  * Returns `value` after it has stopped changing for `delay` ms. Useful for
@@ -12,4 +13,17 @@ export function useDebounced<T>(value: T, delay = 250): T {
     return () => clearTimeout(t);
   }, [value, delay]);
   return debounced;
+}
+
+/** True while the viewport is phone-sized (below Tailwind's `md` breakpoint). */
+export function useIsMobile(): boolean {
+  const [mobile, setMobile] = useState(isMobileViewport);
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const onChange = () => setMobile(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return mobile;
 }

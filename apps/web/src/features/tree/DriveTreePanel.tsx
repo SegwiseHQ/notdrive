@@ -177,7 +177,7 @@ function DriveRow({
               <button
                 type="button"
                 onClick={(e) => e.stopPropagation()}
-                className="flex size-5 items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100"
+                className="flex size-5 items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                 title={`Create new Drive file in "${node.name}"`}
               >
                 <Plus className="size-3.5" />

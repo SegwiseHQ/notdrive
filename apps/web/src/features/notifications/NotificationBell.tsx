@@ -74,7 +74,7 @@ export function NotificationBell({ wsId }: Props) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-50 w-[360px] rounded-md border border-border bg-card shadow-xl"
+          className="z-50 w-[360px] max-w-[calc(100vw-16px)] rounded-md border border-border bg-card shadow-xl"
         >
           <header className="flex items-center justify-between border-b border-border px-3 py-2">
             <span className="text-sm font-semibold">Notifications</span>

@@ -2,7 +2,8 @@ import {
   DndContext,
   type DragEndEvent,
   type DragOverEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -35,7 +36,12 @@ export function TreePanel({ wsId, sort }: { wsId: string; sort: ContentSort }) {
     queryKey: ['items', wsId, 'root'],
     queryFn: () => http.listItems({ root: true, archived: false }),
   });
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  // Mouse drags start after a small move; touch drags need a long-press so that
+  // swiping the sidebar on a phone scrolls the tree instead of dragging pages.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
+  );
   const qc = useQueryClient();
 
   const onDragEnd = async (e: DragEndEvent) => {
@@ -141,7 +147,7 @@ function TreeRow({
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              className="flex size-5 items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100"
+              className="flex size-5 items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-background group-hover:opacity-100 [@media(hover:none)]:opacity-100"
               title="More"
             >
               <MoreHorizontal className="size-3.5" />

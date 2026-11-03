@@ -33,7 +33,7 @@ export function ImportPage() {
   });
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col px-12 py-10">
+    <div className="mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col px-4 py-6 md:px-12 md:py-10">
       <div className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Import</h1>
         <p className="mt-1 text-sm text-muted-foreground">

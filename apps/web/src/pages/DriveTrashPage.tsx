@@ -38,7 +38,7 @@ export function DriveTrashPage() {
   });
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-12 py-10">
+    <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col px-4 py-6 md:px-12 md:py-10">
       <div className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight">Drive trash</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -74,7 +74,7 @@ export function DriveTrashPage() {
               href={`https://drive.google.com/file/d/${f.id}/view`}
               target="_blank"
               rel="noreferrer"
-              className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted group-hover:opacity-100"
+              className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-muted group-hover:opacity-100 [@media(hover:none)]:opacity-100"
               title="Open in Drive"
             >
               <ExternalLink className="size-3.5" />
